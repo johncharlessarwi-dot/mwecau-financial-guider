@@ -84,8 +84,9 @@ class BudgetController extends Controller
             ->when($budget->category_id, fn (Builder $query) => $query->where('category', $budget->category?->name))
             ->sum('amount');
 
-        $amount = (float) $budget->amount;
-        $spent = (float) $spending;
+        $amountCents = $this->toCents((string) $budget->amount);
+        $spentCents = $this->toCents((string) $spending);
+        $remainingCents = $amountCents - $spentCents;
 
         return [
             'id' => $budget->id,
@@ -98,10 +99,25 @@ class BudgetController extends Controller
             'start_date' => $budget->start_date->toDateString(),
             'end_date' => $budget->end_date->toDateString(),
             'is_active' => $budget->is_active,
-            'spent_amount' => number_format($spent, 2, '.', ''),
-            'remaining_amount' => number_format($amount - $spent, 2, '.', ''),
-            'percentage_used' => $amount > 0 ? round(($spent / $amount) * 100, 2) : 0,
-            'overspent' => $spent > $amount,
+            'spent_amount' => $this->formatCents($spentCents),
+            'remaining_amount' => $this->formatCents($remainingCents),
+            'percentage_used' => $amountCents > 0 ? round(($spentCents / $amountCents) * 100, 2) : 0,
+            'overspent' => $spentCents > $amountCents,
         ];
+    }
+
+    private function toCents(string $amount): int
+    {
+        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '0');
+
+        return ((int) $whole * 100) + (int) str_pad(substr($fraction, 0, 2), 2, '0');
+    }
+
+    private function formatCents(int $cents): string
+    {
+        $sign = $cents < 0 ? '-' : '';
+        $absolute = abs($cents);
+
+        return $sign.intdiv($absolute, 100).'.'.str_pad((string) ($absolute % 100), 2, '0', STR_PAD_LEFT);
     }
 }
