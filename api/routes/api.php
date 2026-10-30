@@ -23,6 +23,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/accounts', [AccountController::class, 'store']);
         Route::get('/transactions', [TransactionController::class, 'index']);
         Route::post('/transactions', [TransactionController::class, 'store']);
+        Route::patch('/transactions/{transaction}', [TransactionController::class, 'update']);
         Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy']);
     });
 });
