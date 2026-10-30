@@ -65,7 +65,7 @@ class CategoryController extends Controller
         if (isset($data['name'])) {
             $duplicate = $request->user()->categories()
                 ->where('type', $record->type)
-                ->whereKeyNot($record->id)
+                ->where('id', '<>', $record->id)
                 ->whereRaw('LOWER(name) = ?', [mb_strtolower($data['name'])])
                 ->exists();
 
