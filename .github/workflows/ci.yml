@@ -66,6 +66,8 @@ jobs:
         run: composer install --no-interaction --prefer-dist
       - name: Audit PHP dependencies
         run: composer audit
+      - name: Prepare test environment
+        run: touch .env
       - name: Run API feature tests
         env:
           APP_ENV: testing
