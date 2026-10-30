@@ -1,6 +1,6 @@
 # MWECau GUIDER API
 
-Laravel 11 REST API for the MWECau GUIDER personal finance platform.
+Laravel 12 REST API for the MWECau GUIDER personal finance platform.
 
 ## Requirements
 
