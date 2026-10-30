@@ -26,7 +26,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::post('/categories', [CategoryController::class, 'store'])->middleware('throttle:30,1');
         Route::patch('/categories/{category}', [CategoryController::class, 'update'])->middleware('throttle:30,1');
-        Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->middleware('throttle:30,1');
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->middleware('throttle:30,1');\n        Route::get('/budgets', [BudgetController::class, 'index']);\n        Route::post('/budgets', [BudgetController::class, 'store'])->middleware('throttle:30,1');\n        Route::patch('/budgets/{budget}', [BudgetController::class, 'update'])->middleware('throttle:30,1');\n        Route::delete('/budgets/{budget}', [BudgetController::class, 'destroy'])->middleware('throttle:30,1');
         Route::post('/transfers', [TransferController::class, 'store']);
         Route::get('/transactions', [TransactionController::class, 'index']);
         Route::post('/transactions', [TransactionController::class, 'store']);
