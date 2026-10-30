@@ -13,7 +13,7 @@ Laravel 12 REST API for the MWECau GUIDER personal finance platform.
 1. Run `composer install` inside this directory.
 2. Copy `.env.example` to `.env` and configure a local database.
 3. Run `php artisan key:generate`.
-4. Run `php artisan migrate`.
+4. Run `php artisan migrate --seed` to create the system income and expense categories.
 5. Start with `php artisan serve`.
 
 ## API baseline
