@@ -30,11 +30,11 @@ class BudgetManagementTest extends TestCase
             'end_date' => '2026-10-31',
         ]);
         $base = ['user_id' => $user->id, 'account_id' => $account->id, 'type' => 'expense', 'currency' => 'TZS', 'description' => 'Expense', 'occurred_at' => '2026-10-15 10:00:00', 'status' => 'confirmed'];
-        Transaction::create($base + ['amount' => 25000, 'category' => 'Food']);
-        Transaction::create($base + ['amount' => 90000, 'category' => 'Food', 'transfer_reference' => 'transfer-uuid']);
-        Transaction::create($base + ['amount' => 50000, 'category' => 'Transport']);
-        Transaction::create($base + ['amount' => 50000, 'category' => 'Food', 'currency' => 'USD']);
-        Transaction::create($base + ['amount' => 50000, 'category' => 'Food', 'occurred_at' => '2026-11-01 10:00:00']);
+        Transaction::create(array_merge($base, ['amount' => 25000, 'category' => 'Food']));
+        Transaction::create(array_merge($base, ['amount' => 90000, 'category' => 'Food', 'transfer_reference' => '550e8400-e29b-41d4-a716-446655440000']));
+        Transaction::create(array_merge($base, ['amount' => 50000, 'category' => 'Transport']));
+        Transaction::create(array_merge($base, ['amount' => 50000, 'category' => 'Food', 'currency' => 'USD']));
+        Transaction::create(array_merge($base, ['amount' => 50000, 'category' => 'Food', 'occurred_at' => '2026-11-01 10:00:00']));
 
         Sanctum::actingAs($user);
         $this->getJson('/api/v1/budgets')->assertOk()
