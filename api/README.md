@@ -24,9 +24,11 @@ All endpoints are versioned under `/api/v1`.
 - `POST /auth/register` — create account and issue Sanctum token
 - `POST /auth/login` — authenticate and issue token
 - `POST /auth/logout` — revoke current token
-- `GET|POST /accounts` — list and create owned accounts
+- `GET|POST /accounts` — list and create owned accounts; account listing includes a calculated `current_balance`
 - `GET|POST /transactions` — list and create owned ledger entries
+- `PATCH /transactions/{id}` — update an owned ledger entry
 - `DELETE /transactions/{id}` — delete an owned entry
+- `POST /transfers` — atomically record a same-currency transfer between two owned accounts
 
 Authenticated endpoints require `Authorization: Bearer <token>`.
 
@@ -34,10 +36,12 @@ Authenticated endpoints require `Authorization: Bearer <token>`.
 
 - Persisted money uses SQL DECIMAL, not floating-point columns.
 - Account and transaction queries are scoped to the authenticated user.
-- A transaction cannot be attached to another user's account.
+- A transaction cannot be attached to another user's account, including during updates.
+- Transfers create linked debit and credit entries under one database transaction; both accounts must belong to the authenticated user and use the same currency.
+- Account balances are calculated from opening balances and confirmed ledger entries; transfers are represented by paired entries so they do not change the user's total wealth.
 - Registration and login are rate-limited.
 - Never commit `.env`, credentials, production keys, or real financial records.
-- This initial ledger supports income and expense only. Transfers, reconciliation, immutable audit history, and accounting-period controls are separate planned phases.
+- Reconciliation, immutable audit history, and accounting-period controls remain planned work.
 
 ## Tests
 
