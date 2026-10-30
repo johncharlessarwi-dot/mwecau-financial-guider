@@ -9,7 +9,7 @@ class Transaction extends Model
 {
     protected $fillable = [
         'user_id', 'account_id', 'type', 'amount', 'currency',
-        'category', 'description', 'occurred_at', 'reference', 'status',
+        'category', 'description', 'occurred_at', 'reference', 'transfer_reference', 'status',
     ];
 
     protected function casts(): array
