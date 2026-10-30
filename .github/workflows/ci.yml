@@ -33,6 +33,8 @@ jobs:
         run: |
           npm audit --json > /tmp/npm-audit.json || true
           node -e 'const a=require("/tmp/npm-audit.json"); for (const [name,v] of Object.entries(a.vulnerabilities || {})) console.log(JSON.stringify({name,severity:v.severity,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x === "string" ? x : {title:x.title,url:x.url,range:x.range})})); console.log("SUMMARY", JSON.stringify(a.metadata?.vulnerabilities || {}))'
+      - name: Enforce dependency security audit
+        run: npm audit --audit-level=moderate
       - name: Typecheck
         run: npm run typecheck
       - name: Run unit tests
@@ -62,6 +64,8 @@ jobs:
         run: composer validate --no-check-publish
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
+      - name: Audit PHP dependencies
+        run: composer audit
       - name: Run API feature tests
         env:
           APP_ENV: testing
