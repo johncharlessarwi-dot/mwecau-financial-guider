@@ -1,0 +1,38 @@
+name: MWECau GUIDER CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guider-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-web:
+    name: Typecheck, test and build web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@1e60f620b9541d7c3a5e7b1b4c8c5e7c6a5e8c4b
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Run unit tests
+        run: npm test
+      - name: Production build
+        run: npm run build
