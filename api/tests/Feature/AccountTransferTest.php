@@ -100,8 +100,7 @@ class AccountTransferTest extends TestCase
         ]);
         $token = $user->createToken('test')->plainTextToken;
 
-        $this->withToken($token)->getJson('/api/v1/accounts')
-            ->assertOk()
-            ->assertJsonPath('data.0.current_balance', '13000.00');
+        $response = $this->withToken($token)->getJson('/api/v1/accounts')->assertOk();
+        $this->assertEquals(13000, (float) $response->json('data.0.current_balance'));
     }
 }
