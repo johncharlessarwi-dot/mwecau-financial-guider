@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: guider-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   verify-web:
@@ -29,6 +29,10 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Report dependency vulnerabilities
+        run: |
+          npm audit --json > /tmp/npm-audit.json || true
+          node -e 'const a=require("/tmp/npm-audit.json"); for (const [name,v] of Object.entries(a.vulnerabilities || {})) console.log(JSON.stringify({name,severity:v.severity,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x === "string" ? x : {title:x.title,url:x.url,range:x.range})})); console.log("SUMMARY", JSON.stringify(a.metadata?.vulnerabilities || {}))'
       - name: Typecheck
         run: npm run typecheck
       - name: Run unit tests
