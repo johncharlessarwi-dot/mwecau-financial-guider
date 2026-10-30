@@ -36,6 +36,11 @@ class LedgerFilteringAndUpdateTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.description', 'Transport');
+
+        $this->withToken($token)->getJson('/api/v1/transactions?to=2026-10-05')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.description', 'Salary');
     }
 
     public function test_user_can_update_only_their_own_transaction(): void
