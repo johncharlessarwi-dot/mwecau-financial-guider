@@ -46,6 +46,11 @@ class AccountTransferTest extends TestCase
             'amount' => '25000.00',
             'transfer_reference' => $reference,
         ]);
+
+        $balances = $this->withToken($token)->getJson('/api/v1/accounts')->assertOk();
+        $byId = collect($balances->json('data'))->keyBy('id');
+        $this->assertEquals(75000, (float) $byId[$wallet->id]['current_balance']);
+        $this->assertEquals(25000, (float) $byId[$bank->id]['current_balance']);
     }
 
     public function test_transfer_rejects_different_currencies_and_foreign_accounts(): void
