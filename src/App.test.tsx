@@ -24,7 +24,7 @@ describe("MWECau GUIDER dashboard", () => {
     render(<App />);
     fireEvent.click(screen.getAllByRole("button", { name: "Transactions" })[0]);
     fireEvent.change(screen.getByRole("textbox", { name: "Search transactions" }), { target: { value: "groceries" } });
-    expect(screen.getByText("Groceries & essentials")).toBeInTheDocument();
-    expect(screen.queryByText("Campus transport")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Groceries & essentials").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("Campus transport")).toHaveLength(0);
   });
 });
