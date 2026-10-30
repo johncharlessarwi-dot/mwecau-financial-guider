@@ -24,10 +24,9 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Node.js
-        uses: actions/setup-node@1e60f620b9541d7c3a5e7b1b4c8c5e7c6a5e8c4b
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
-          cache: npm
       - name: Install dependencies
         run: npm install
       - name: Typecheck
