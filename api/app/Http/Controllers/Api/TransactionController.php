@@ -18,7 +18,7 @@ class TransactionController extends Controller
             'account_id' => ['sometimes', 'integer'],
             'category' => ['sometimes', 'string', 'max:60'],
             'from' => ['sometimes', 'date'],
-            'to' => ['sometimes', 'date', 'after_or_equal:from'],
+            'to' => ['sometimes', 'date'],
             'search' => ['sometimes', 'string', 'max:100'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
