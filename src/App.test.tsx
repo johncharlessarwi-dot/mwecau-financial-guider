@@ -12,7 +12,7 @@ describe("MWECau GUIDER dashboard", () => {
 
   it("adds a valid transaction to the local demo ledger", () => {
     render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: /Add transaction/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: /Add transaction/i })[0]);
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Test payment" } });
     fireEvent.change(screen.getByLabelText("Amount (TZS)"), { target: { value: "15000" } });
     fireEvent.click(screen.getByRole("button", { name: /Save entry/i }));
@@ -22,7 +22,7 @@ describe("MWECau GUIDER dashboard", () => {
 
   it("filters the transaction list", () => {
     render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "Transactions" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Transactions" })[0]);
     fireEvent.change(screen.getByRole("textbox", { name: "Search transactions" }), { target: { value: "groceries" } });
     expect(screen.getByText("Groceries & essentials")).toBeInTheDocument();
     expect(screen.queryByText("Campus transport")).not.toBeInTheDocument();
