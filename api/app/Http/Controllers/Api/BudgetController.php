@@ -59,7 +59,7 @@ class BudgetController extends Controller
         $required = $partial ? 'sometimes|required' : 'required';
 
         $data = $request->validate([
-            'category_id' => ['sometimes', 'nullable', 'integer', Rule::exists('categories', 'id')->where('user_id', $request->user()->id)->where('type', 'expense')->where('is_active', true)],
+            'category_id' => ['sometimes', 'nullable', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('type', 'expense')->where('is_active', true)->where(fn ($scope) => $scope->whereNull('user_id')->where('is_system', true)->orWhere('user_id', $request->user()->id)))],
             'name' => [$required, 'string', 'min:2', 'max:80'],
             'amount' => [$required, 'numeric', 'gt:0', 'max:9999999999999999.99'],
             'currency' => [$required === 'required' ? 'sometimes' : 'sometimes', 'required', 'in:TZS,USD'],
