@@ -75,13 +75,14 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('mobile-client', ['*'], now()->addDays(30))->plainTextToken;
+        $expiresAt = now()->addDays(30);
+        $token = $user->createToken('mobile-client', ['*'], $expiresAt)->plainTextToken;
 
         return response()->json([
             'user' => $user->only(['id', 'name', 'email']),
             'token' => $token,
             'token_type' => 'Bearer',
-            'expires_at' => now()->addDays(30)->toISOString(),
+            'expires_at' => $expiresAt->toISOString(),
         ]);
     }
 
