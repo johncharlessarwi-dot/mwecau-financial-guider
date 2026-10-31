@@ -77,6 +77,85 @@ class AccountTransferTest extends TestCase
         $this->assertDatabaseCount('transactions', 0);
     }
 
+
+    public function test_replaying_transfer_with_same_idempotency_key_returns_original_pair(): void
+    {
+        $user = User::create(['name' => 'Idempotent Transfer', 'email' => 'transfer-idempotent@example.com', 'password' => 'a-secure-password']);
+        $wallet = Account::create(['user_id' => $user->id, 'name' => 'Wallet', 'type' => 'cash', 'currency' => 'TZS', 'opening_balance' => '100000.00']);
+        $bank = Account::create(['user_id' => $user->id, 'name' => 'Bank', 'type' => 'bank', 'currency' => 'TZS', 'opening_balance' => '0.00']);
+        $token = $user->createToken('test')->plainTextToken;
+        $payload = [
+            'from_account_id' => $wallet->id,
+            'to_account_id' => $bank->id,
+            'amount' => '25000.00',
+            'description' => 'Retry-safe savings transfer',
+            'occurred_at' => '2026-10-31 10:00:00',
+        ];
+        $key = 'offline-transfer-key-0001';
+
+        $first = $this->withToken($token)->withHeaders(['Idempotency-Key' => $key])
+            ->postJson('/api/v1/transfers', $payload)
+            ->assertCreated();
+        $reference = $first->json('transfer_reference');
+
+        $this->withToken($token)->withHeaders(['Idempotency-Key' => $key])
+            ->postJson('/api/v1/transfers', $payload)
+            ->assertCreated()
+            ->assertJsonPath('transfer_reference', $reference)
+            ->assertJsonPath('data.0.id', $first->json('data.0.id'))
+            ->assertJsonPath('data.1.id', $first->json('data.1.id'));
+
+        $this->assertDatabaseCount('transactions', 2);
+        $this->assertDatabaseCount('idempotency_records', 1);
+    }
+
+    public function test_transfer_idempotency_key_cannot_be_reused_for_a_different_payload(): void
+    {
+        $user = User::create(['name' => 'Transfer Conflict', 'email' => 'transfer-conflict@example.com', 'password' => 'a-secure-password']);
+        $wallet = Account::create(['user_id' => $user->id, 'name' => 'Wallet', 'type' => 'cash', 'currency' => 'TZS', 'opening_balance' => '100000.00']);
+        $bank = Account::create(['user_id' => $user->id, 'name' => 'Bank', 'type' => 'bank', 'currency' => 'TZS', 'opening_balance' => '0.00']);
+        $token = $user->createToken('test')->plainTextToken;
+        $payload = [
+            'from_account_id' => $wallet->id,
+            'to_account_id' => $bank->id,
+            'amount' => '25000.00',
+            'description' => 'Original transfer',
+            'occurred_at' => '2026-10-31 10:00:00',
+        ];
+        $key = 'offline-transfer-key-0002';
+
+        $this->withToken($token)->withHeaders(['Idempotency-Key' => $key])
+            ->postJson('/api/v1/transfers', $payload)
+            ->assertCreated();
+
+        $payload['amount'] = '30000.00';
+        $this->withToken($token)->withHeaders(['Idempotency-Key' => $key])
+            ->postJson('/api/v1/transfers', $payload)
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'This Idempotency-Key was already used with a different transfer payload.');
+
+        $this->assertDatabaseCount('transactions', 2);
+        $this->assertDatabaseCount('idempotency_records', 1);
+    }
+
+    public function test_transfer_idempotency_key_must_have_a_safe_length(): void
+    {
+        $user = User::create(['name' => 'Transfer Key Validation', 'email' => 'transfer-key@example.com', 'password' => 'a-secure-password']);
+        $wallet = Account::create(['user_id' => $user->id, 'name' => 'Wallet', 'type' => 'cash', 'currency' => 'TZS']);
+        $bank = Account::create(['user_id' => $user->id, 'name' => 'Bank', 'type' => 'bank', 'currency' => 'TZS']);
+        $token = $user->createToken('test')->plainTextToken;
+
+        $this->withToken($token)->withHeaders(['Idempotency-Key' => 'short'])
+            ->postJson('/api/v1/transfers', [
+                'from_account_id' => $wallet->id,
+                'to_account_id' => $bank->id,
+                'amount' => '1000.00',
+            ])->assertUnprocessable();
+
+        $this->assertDatabaseCount('transactions', 0);
+        $this->assertDatabaseCount('idempotency_records', 0);
+    }
+
     public function test_account_list_includes_current_balance_from_confirmed_ledger_entries(): void
     {
         $user = User::create(['name' => 'Balance User', 'email' => 'balance@example.com', 'password' => 'a-secure-password']);
