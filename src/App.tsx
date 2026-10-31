@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { apiRequest } from "./lib/api";
+import { apiRequest, ApiRequestError } from "./lib/api";
 import { enqueueOfflineTransaction, listPendingOfflineTransactions, readOfflineSnapshot, saveOfflineSnapshot } from "./lib/offlineStore";
 import { syncPendingOfflineTransactions } from "./lib/offlineSync";
 import { createIdempotencyKey } from "./lib/idempotency";
@@ -29,7 +29,7 @@ const money = (value: number, currency = "TZS") => new Intl.NumberFormat("en-TZ"
 }).format(value);
 
 function DashboardApp() {
-  const { user, logout } = useAuth();
+  const { user, logout, expireSession } = useAuth();
   const pendingTransaction = useRef<{ fingerprint: string; key: string; body: string } | null>(null);
   const [tab, setTab] = useState<Tab>("Overview");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -70,6 +70,20 @@ function DashboardApp() {
   const budgetPercent = totalBudget > 0 ? Math.min(100, totalSpent / totalBudget * 100) : 0;
   const filtered = useMemo(() => transactions.filter(t => (t.title + t.category).toLowerCase().includes(query.toLowerCase())), [transactions, query]);
 
+  const clearAfterAuthorizationFailure = async (error: unknown): Promise<boolean> => {
+    if (!(error instanceof ApiRequestError) || (error.status !== 401 && error.status !== 403)) return false;
+    await expireSession().catch(() => undefined);
+    setAccounts([]);
+    setCategories([]);
+    setTransactions([]);
+    setBudgets([]);
+    setPendingOfflineCount(0);
+    setOfflineQueueNotice("");
+    setReport(null);
+    setDataError(error.message);
+    return true;
+  };
+
   const refreshFinanceData = async () => {
     setLoadingData(true);
     setDataError("");
@@ -108,6 +122,7 @@ function DashboardApp() {
         accounts: nextAccounts, categories: nextCategories, transactions: nextTransactions, budgets: nextBudgets
       }).catch(() => undefined);
     } catch (error) {
+      if (await clearAfterAuthorizationFailure(error)) return;
       const snapshot = await readOfflineSnapshot<OfflineDashboardSnapshot>(user.id, "finance-dashboard").catch(() => null);
       if (snapshot) {
         setAccounts(snapshot.accounts);
@@ -150,6 +165,7 @@ function DashboardApp() {
         setOfflineQueueNotice("All queued transactions are synchronized.");
       }
     } catch (error) {
+      if (await clearAfterAuthorizationFailure(error)) return;
       setOfflineQueueNotice(error instanceof Error ? "Offline sync paused: " + error.message : "Offline sync could not be completed.");
     } finally {
       setIsSyncingOffline(false);
