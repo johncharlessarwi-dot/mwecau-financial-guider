@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AccountController extends Controller
 {
@@ -29,10 +30,10 @@ class AccountController extends Controller
             'opening_balance' => ['sometimes', 'numeric', 'min:0', 'max:9999999999999999.99'],
         ]);
 
-        $account = $request->user()->accounts()->create($data + [
+        $account = DB::transaction(fn () => $request->user()->accounts()->create($data + [
             'currency' => $data['currency'] ?? 'TZS',
             'opening_balance' => $data['opening_balance'] ?? '0.00',
-        ]);
+        ]));
 
         return response()->json(['data' => $account], 201);
     }
