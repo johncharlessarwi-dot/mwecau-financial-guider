@@ -24,7 +24,7 @@ class FinancialReportsTest extends TestCase
         Transaction::create(array_merge($base, ['type' => 'income', 'amount' => '100000.00', 'category' => 'Salary', 'description' => 'Salary']));
         Transaction::create(array_merge($base, ['type' => 'expense', 'amount' => '25000.00', 'category' => 'Food', 'description' => 'Groceries']));
         Transaction::create(array_merge($base, ['type' => 'expense', 'amount' => '70000.00', 'category' => 'Transfer', 'description' => 'Transfer leg', 'transfer_reference' => '550e8400-e29b-41d4-a716-446655440000']));
-        Transaction::create(array_merge($base, ['type' => 'expense', 'amount' => '90000.00', 'category' => 'Shopping', 'description' => 'Pending purchase', 'status' => 'pending']));
+        Transaction::create(array_merge($base, ['type' => 'expense', 'amount' => '90000.00', 'category' => 'Shopping', 'description' => 'Draft purchase', 'status' => 'draft']));
         Transaction::create(array_merge($base, ['type' => 'expense', 'amount' => '50000.00', 'category' => 'Transport', 'description' => 'Outside range', 'occurred_at' => '2026-09-30 10:00:00']));
         Transaction::create(['user_id' => $user->id, 'account_id' => $usdAccount->id, 'type' => 'income', 'amount' => '50.25', 'currency' => 'USD', 'category' => 'Freelance', 'description' => 'USD work', 'occurred_at' => '2026-10-16 10:00:00', 'status' => 'confirmed']);
         Transaction::create(['user_id' => $other->id, 'account_id' => $otherAccount->id, 'type' => 'income', 'amount' => '999999.00', 'currency' => 'TZS', 'category' => 'Salary', 'description' => 'Foreign tenant', 'occurred_at' => '2026-10-15 10:00:00', 'status' => 'confirmed']);
