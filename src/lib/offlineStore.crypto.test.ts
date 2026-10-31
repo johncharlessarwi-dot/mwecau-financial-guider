@@ -1,4 +1,3 @@
-import { webcrypto } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   enqueueOfflineTransaction,
@@ -24,7 +23,8 @@ describe("offline storage with real Web Crypto", () => {
       request.onerror = () => reject(request.error);
       request.onblocked = () => reject(new Error("Offline test database is blocked."));
     });
-    vi.stubGlobal("crypto", webcrypto as unknown as Crypto);
+    const nodeCrypto = await import("node:crypto" as string) as { webcrypto: Crypto };
+    vi.stubGlobal("crypto", nodeCrypto.webcrypto);
   });
 
   it("persists non-extractable AES-GCM keys and ciphertext rather than plaintext", async () => {
