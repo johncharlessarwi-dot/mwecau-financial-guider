@@ -18,16 +18,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const csrf = await fetch(`${API_ORIGIN}/sanctum/csrf-cookie`, { credentials: "include", headers: { Accept: "application/json" } });
     if (!csrf.ok) throw new Error("Unable to start a secure session. Check the API URL and CORS configuration.");
   }
+  const headers = new Headers(options.headers);
+  headers.set("Accept", "application/json");
+  if (options.body) headers.set("Content-Type", "application/json");
+  const csrfToken = xsrfToken();
+  if (csrfToken) headers.set("X-XSRF-TOKEN", csrfToken);
+
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     method,
     credentials: "include",
-    headers: {
-      Accept: "application/json",
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(xsrfToken() ? { "X-XSRF-TOKEN": xsrfToken() } : {}),
-      ...options.headers,
-    },
+    headers,
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
