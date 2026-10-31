@@ -113,6 +113,79 @@ class FinancialAuditLogTest extends TestCase
         $this->assertStringNotContainsString('Updated private description', $serializedLogs);
     }
 
+
+    public function test_financial_writes_roll_back_when_audit_log_persistence_fails(): void
+    {
+        $user = User::factory()->create();
+        $account = Account::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Atomic wallet',
+            'type' => 'cash',
+            'currency' => 'TZS',
+            'opening_balance' => '0',
+            'is_active' => true,
+        ]);
+        $transaction = Transaction::query()->create([
+            'user_id' => $user->id,
+            'account_id' => $account->id,
+            'type' => 'expense',
+            'amount' => '1000.00',
+            'currency' => 'TZS',
+            'category' => 'Other',
+            'description' => 'Original transaction',
+            'occurred_at' => now(),
+            'status' => 'confirmed',
+        ]);
+
+        $this->actingAs($user)->withoutExceptionHandling();
+        AuditLog::creating(static function (): void {
+            throw new \\RuntimeException('Audit log persistence failed.');
+        });
+
+        $this->expectAuditFailure(fn () => $this->postJson('/api/v1/accounts', [
+            'name' => 'New wallet',
+            'type' => 'cash',
+            'currency' => 'TZS',
+            'opening_balance' => '500.00',
+        ]));
+        $this->assertDatabaseMissing('accounts', ['user_id' => $user->id, 'name' => 'New wallet']);
+
+        $this->expectAuditFailure(fn () => $this->postJson('/api/v1/transactions', [
+            'account_id' => $account->id,
+            'type' => 'expense',
+            'amount' => '250.00',
+            'currency' => 'TZS',
+            'category' => 'Other',
+            'description' => 'Must roll back',
+            'occurred_at' => now()->toDateTimeString(),
+        ]));
+        $this->assertDatabaseMissing('transactions', ['user_id' => $user->id, 'description' => 'Must roll back']);
+
+        $this->expectAuditFailure(fn () => $this->patchJson('/api/v1/transactions/'.$transaction->id, [
+            'description' => 'Attempted unaudited update',
+        ]));
+        $this->assertDatabaseHas('transactions', [
+            'id' => $transaction->id,
+            'description' => 'Original transaction',
+        ]);
+
+        $this->expectAuditFailure(fn () => $this->deleteJson('/api/v1/transactions/'.$transaction->id));
+        $this->assertDatabaseHas('transactions', [
+            'id' => $transaction->id,
+            'description' => 'Original transaction',
+        ]);
+    }
+
+    private function expectAuditFailure(callable $operation): void
+    {
+        try {
+            $operation();
+            $this->fail('Expected audit log persistence failure.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertSame('Audit log persistence failed.', $exception->getMessage());
+        }
+    }
+
     public function test_transfer_writes_audit_entries_for_both_ledger_sides(): void
     {
         $user = User::factory()->create();
