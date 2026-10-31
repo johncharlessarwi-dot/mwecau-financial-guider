@@ -86,10 +86,10 @@ jobs:
     steps:
       - name: Send CI result to repository owner
         env:
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: johncharlessarwi@gmail.com
+          SMTP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SMTP_SERVER: smtp.gmail.com
+          SMTP_PORT: '465'
           WEB_RESULT: ${{ needs.verify-web.result }}
           API_RESULT: ${{ needs.verify-api.result }}
           REPOSITORY: ${{ github.repository }}
