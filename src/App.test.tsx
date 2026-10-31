@@ -33,6 +33,7 @@ describe("MWECau GUIDER dashboard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Budgets" }));
     fireEvent.click(screen.getByRole("button", { name: /Create budget/i }));
     fireEvent.change(screen.getByLabelText("Budget name"), { target: { value: "Emergency fund" } });
+    fireEvent.change(screen.getByLabelText("Expense category"), { target: { value: "Housing" } });
     fireEvent.change(screen.getByLabelText("Limit (TZS)"), { target: { value: "50000" } });
     fireEvent.click(screen.getByRole("button", { name: "Save budget" }));
     expect(screen.getByText("Emergency fund")).toBeInTheDocument();
