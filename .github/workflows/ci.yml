@@ -55,7 +55,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate backup and recovery shell scripts
-        run: bash -n ../scripts/backup-mysql.sh ../scripts/restore-mysql.sh
+        run: bash -n ../scripts/backup-mysql.sh ../scripts/restore-mysql.sh ../scripts/test-backup-restore.sh
+      - name: Install age for encrypted backup integration test
+        run: sudo apt-get update && sudo apt-get install --yes age
+      - name: Exercise encrypted backup and guarded restore
+        run: bash ../scripts/test-backup-restore.sh
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
