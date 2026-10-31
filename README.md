@@ -24,6 +24,21 @@ See:
 - [Implementation roadmap](docs/ROADMAP.md)
 - [Security and privacy principles](SECURITY.md)
 
+
+## Local development: authenticated SPA
+
+The web client uses Laravel Sanctum's stateful, cookie-based SPA authentication. It does not persist bearer tokens in local storage.
+
+1. Start the Laravel API from `api/` and configure its database and application key.
+2. Set `SANCTUM_STATEFUL_DOMAINS` to the frontend hostname and port (without a scheme), for example `localhost:5173,127.0.0.1:5173`.
+3. Set `CORS_ALLOWED_ORIGINS` to the exact frontend origin, for example `http://localhost:5173`. Credential support is enabled only for these configured origins.
+4. Copy the root `.env.example` to `.env` and set `VITE_API_URL` to the API origin, for example `http://localhost:8000`.
+5. Start the Vite client with `npm install && npm run dev`.
+
+The browser first obtains the Sanctum CSRF cookie, then sends credentialed requests. The API regenerates the session identifier after registration and login, exposes only a safe user profile, and invalidates the session on logout. Login and registration remain rate-limited.
+
+For production, serve the frontend and API over HTTPS, set `SESSION_SECURE_COOKIE=true`, use a same-site deployment topology where possible, and configure the cookie domain and Sanctum stateful domains for the actual hostnames. Do not use wildcard CORS origins with credentials. The finance dashboard still uses clearly labelled demo ledger data at this phase; authentication is connected, but transactions, budgets and categories have not yet been wired to persistent API records.
+
 ## Important financial-data principles
 
 1. Financial amounts use decimal-safe storage and calculations; never binary floating-point for persisted money.
