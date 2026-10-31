@@ -46,6 +46,7 @@ class ReportController extends Controller
             ->groupBy('currency', 'type', 'category')
             ->orderBy('currency')
             ->orderBy('type')
+            ->orderBy('category')
             ->get();
 
         $currencies = collect(['TZS', 'USD'])
