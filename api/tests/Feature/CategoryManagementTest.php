@@ -25,7 +25,7 @@ class CategoryManagementTest extends TestCase
         $own = $user->categories()->create(['type' => 'expense', 'name' => 'Transport']);
         $other->categories()->create(['type' => 'expense', 'name' => 'Private']);
 
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, ['read', 'write']);
         $response = $this->getJson('/api/v1/categories')->assertOk();
 
         $ids = collect($response->json('data'))->pluck('id');
@@ -38,7 +38,7 @@ class CategoryManagementTest extends TestCase
         $user = User::factory()->create();
         $other = User::factory()->create();
         $foreign = $other->categories()->create(['type' => 'income', 'name' => 'Salary']);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, ['read', 'write']);
 
         $created = $this->postJson('/api/v1/categories', [
             'type' => 'expense', 'name' => 'Transport', 'color' => '#123456', 'icon' => 'bus',
@@ -52,7 +52,7 @@ class CategoryManagementTest extends TestCase
 
     public function test_category_rejects_invalid_color_icon_and_duplicate_names(): void
     {
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), ['read', 'write']);
         $this->postJson('/api/v1/categories', ['type' => 'expense', 'name' => 'Food', 'color' => 'red'])->assertUnprocessable();
         $this->postJson('/api/v1/categories', ['type' => 'expense', 'name' => 'Food', 'icon' => '<script>'])->assertUnprocessable();
         $this->postJson('/api/v1/categories', ['type' => 'expense', 'name' => 'Food'])->assertCreated();
