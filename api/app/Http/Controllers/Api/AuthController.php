@@ -76,7 +76,7 @@ class AuthController extends Controller
         }
 
         $expiresAt = now()->addDays(30);
-        $token = $user->createToken('mobile-client', ['*'], $expiresAt)->plainTextToken;
+        $token = $user->createToken('mobile-client', ['read', 'write'], $expiresAt)->plainTextToken;
 
         return response()->json([
             'user' => $user->only(['id', 'name', 'email']),
