@@ -76,3 +76,59 @@ jobs:
           DB_DATABASE: ':memory:'
           CACHE_STORE: array
         run: php artisan test --display-warnings
+
+  notify-email:
+    name: Email CI result
+    runs-on: ubuntu-latest
+    needs: [verify-web, verify-api]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Send CI result to repository owner
+        if: ${{ secrets.SMTP_PASSWORD != '' }}
+        env:
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          WEB_RESULT: ${{ needs.verify-web.result }}
+          API_RESULT: ${{ needs.verify-api.result }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RECIPIENT: johncharlessarwi@gmail.com
+        run: |
+          python3 - <<'PY'
+          import os
+          import smtplib
+          from email.message import EmailMessage
+
+          web = os.environ["WEB_RESULT"]
+          api = os.environ["API_RESULT"]
+          passed = web == "success" and api == "success"
+          status = "SUCCESS" if passed else "FAILED"
+          msg = EmailMessage()
+          msg["Subject"] = f"[MWECau GUIDER CI] {status} - {os.environ['BRANCH']}"
+          msg["From"] = os.environ["SMTP_USERNAME"]
+          msg["To"] = os.environ["RECIPIENT"]
+          msg.set_content(
+              f"MWECau GUIDER continuous integration result: {status}\n\n"
+              f"Web checks: {web}\nAPI checks: {api}\n"
+              f"Repository: {os.environ['REPOSITORY']}\n"
+              f"Branch: {os.environ['BRANCH']}\n"
+              f"Commit: {os.environ['COMMIT_SHA']}\n"
+              f"Workflow run: {os.environ['RUN_URL']}\n"
+          )
+          with smtplib.SMTP_SSL(
+              os.environ.get("SMTP_SERVER", "smtp.gmail.com"),
+              int(os.environ.get("SMTP_PORT", "465")),
+              timeout=20,
+          ) as smtp:
+              smtp.login(os.environ["SMTP_USERNAME"], os.environ["SMTP_PASSWORD"])
+              smtp.send_message(msg)
+          print(f"CI {status} email sent to {os.environ['RECIPIENT']}")
+          PY
+      - name: Explain skipped email notification
+        if: ${{ secrets.SMTP_PASSWORD == '' }}
+        run: echo "Email notification skipped because SMTP GitHub Actions secrets are not configured."
