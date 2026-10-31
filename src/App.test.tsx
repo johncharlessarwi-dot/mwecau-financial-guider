@@ -124,7 +124,7 @@ describe("MWECau GUIDER live finance workspace", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: /Add transaction/i })[0]);
     fireEvent.change(screen.getByLabelText("Description"), {target:{value:"Retry-safe payment"}});
-    fireEvent.change(screen.getByLabelText(/Amount \\(TZS\\)/), {target:{value:"18000"}});
+    fireEvent.change(screen.getByLabelText(/Amount \(TZS\)/), {target:{value:"18000"}});
     fireEvent.click(screen.getByRole("button", {name:/Save entry/i}));
     await waitFor(() => expect(screen.getByText("Temporary server error")).toBeInTheDocument());
 
