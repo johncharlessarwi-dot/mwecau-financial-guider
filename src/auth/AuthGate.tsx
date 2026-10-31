@@ -115,7 +115,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
     setUser(null);
   }, [user]);
 
-  const expireSession = useCallback(async () => {\n    if (!user) return;\n    await clearUserOfflineData(user.id);\n    setUser(null);\n  }, [user]);\n\n  const context = useMemo(() => user ? { user, logout, expireSession } : null, [user, logout, expireSession]);
+  const expireSession = useCallback(async () => {
+    if (!user) return;
+    await clearUserOfflineData(user.id);
+    setUser(null);
+  }, [user]);
+
+  const context = useMemo(() => user ? { user, logout, expireSession } : null, [user, logout, expireSession]);
 
   if (checking) return <main className="auth-loading"><div className="auth-logo"><Wallet size={23}/></div><p>Checking your secure session…</p></main>;
   if (!user) return <AuthScreen onAuthenticated={setUser}/>;
