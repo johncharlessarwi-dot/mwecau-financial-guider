@@ -24,7 +24,8 @@ const money = (value: number) => new Intl.NumberFormat("en-TZ", {
   style: "currency", currency: "TZS", maximumFractionDigits: 0
 }).format(value);
 
-function DashboardApp() {\n  const { user, logout } = useAuth();
+function DashboardApp() {
+  const { user, logout } = useAuth();
   const [tab, setTab] = useState<Tab>("Overview");
   const [transactions, setTransactions] = useState(initialTransactions);
   const [categories, setCategories] = useState<Category[]>([
