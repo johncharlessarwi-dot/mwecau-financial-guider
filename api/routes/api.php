@@ -19,6 +19,7 @@ Route::prefix('v1')->group(function (): void {
 
     Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('/auth/token', [AuthController::class, 'createMobileToken'])->middleware('throttle:10,1');
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);
