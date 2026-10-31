@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -19,13 +21,14 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:10', 'max:128'],
         ]);
 
+        $data['email'] = mb_strtolower(trim($data['email']));
         $user = User::create($data);
-        $token = $user->createToken('web-client')->plainTextToken;
+
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
 
         return response()->json([
             'user' => $user->only(['id', 'name', 'email']),
-            'token' => $token,
-            'token_type' => 'Bearer',
         ], 201);
     }
 
@@ -36,7 +39,7 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $data['email'])->first();
+        $user = User::where('email', mb_strtolower(trim($data['email'])))->first();
 
         if (! $user || ! Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages([
@@ -44,18 +47,32 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('web-client')->plainTextToken;
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
 
         return response()->json([
             'user' => $user->only(['id', 'name', 'email']),
-            'token' => $token,
-            'token_type' => 'Bearer',
+        ]);
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        return response()->json([
+            'user' => $request->user()->only(['id', 'name', 'email']),
         ]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()?->delete();
+        $currentToken = $request->user()->currentAccessToken();
+
+        if ($currentToken instanceof PersonalAccessToken) {
+            $currentToken->delete();
+        } else {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json(['message' => 'Session revoked.']);
     }
