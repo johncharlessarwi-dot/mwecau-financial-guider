@@ -61,4 +61,15 @@ describe("MWECau GUIDER dashboard", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("That category already exists");
   });
 
+
+  it("makes active custom categories available in transaction entry", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Categories" }));
+    fireEvent.click(screen.getByRole("button", { name: /Add category/i }));
+    fireEvent.change(screen.getByLabelText("Category name"), { target: { value: "Mobile data" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save category" }));
+    fireEvent.click(screen.getAllByRole("button", { name: /Add transaction/i })[0]);
+    expect(screen.getByLabelText("Category")).toContainHTML("Mobile data");
+  });
+
 });
