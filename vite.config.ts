@@ -17,7 +17,7 @@ function offlinePrecachePlugin(): Plugin {
       precacheAssets = [...new Set(precacheAssets)].sort();
     },
     closeBundle() {
-      const cacheVersion = precacheAssets.join("|").length.toString(36);
+      const cacheVersion = precacheAssets.join("|").split("").reduce((hash, char) => Math.imul(hash ^ char.charCodeAt(0), 16777619), 2166136261).toString(36);
       const worker = `const CACHE_NAME = "mwecau-guider-shell-${cacheVersion}";
 const PRECACHE_ASSETS = ${JSON.stringify(precacheAssets)};
 
