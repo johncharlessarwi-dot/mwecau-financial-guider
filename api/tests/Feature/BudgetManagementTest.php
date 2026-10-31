@@ -72,4 +72,45 @@ class BudgetManagementTest extends TestCase
         $payload = ['name' => 'Monthly', 'amount' => 0, 'currency' => 'TZS', 'period' => 'monthly', 'start_date' => '2026-10-31', 'end_date' => '2026-10-01'];
         $this->postJson('/api/v1/budgets', $payload)->assertUnprocessable();
     }
+
+    public function test_partial_date_updates_preserve_and_validate_the_effective_budget_range(): void
+    {
+        $user = User::factory()->create();
+        $budget = $user->budgets()->create([
+            'name' => 'October plan',
+            'amount' => 100000,
+            'currency' => 'TZS',
+            'period' => 'monthly',
+            'start_date' => '2026-10-01',
+            'end_date' => '2026-10-31',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->patchJson('/api/v1/budgets/'.$budget->id, ['end_date' => '2026-09-30'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('end_date');
+
+        $this->patchJson('/api/v1/budgets/'.$budget->id, ['end_date' => '2026-11-30'])
+            ->assertOk()
+            ->assertJsonPath('data.end_date', '2026-11-30');
+
+        $this->patchJson('/api/v1/budgets/'.$budget->id, ['start_date' => '2026-12-01'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('end_date');
+    }
+
+    public function test_budget_rejects_unsupported_currency(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/budgets', [
+            'name' => 'Unsupported currency',
+            'amount' => 1000,
+            'currency' => 'EUR',
+            'period' => 'monthly',
+            'start_date' => '2026-10-01',
+            'end_date' => '2026-10-31',
+        ])->assertUnprocessable()->assertJsonValidationErrors('currency');
+    }
 }
