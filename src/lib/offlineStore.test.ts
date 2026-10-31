@@ -49,7 +49,7 @@ describe("encrypted account-scoped offline storage", () => {
     await expect(readOfflineSnapshot(29, "dashboard")).resolves.toEqual({ balance: 9000 });
   });
 
-  it("clears only the selected account's snapshots, outbox and encryption key", async () => {
+  it("clears private snapshots but preserves encrypted pending transactions for re-authentication", async () => {
     await saveOfflineSnapshot(170, "dashboard", { balance: 1000 });
     await saveOfflineSnapshot(290, "dashboard", { balance: 9000 });
     await enqueueOfflineTransaction(170, "offline-transaction-key-0017", { amount: "100.00" });
@@ -57,8 +57,13 @@ describe("encrypted account-scoped offline storage", () => {
     await clearUserOfflineData(170);
     await expect(readOfflineSnapshot(170, "dashboard")).resolves.toBeNull();
     await expect(readOfflineSnapshot(290, "dashboard")).resolves.toEqual({ balance: 9000 });
-    await expect(listPendingOfflineTransactions(170)).resolves.toHaveLength(0);
+    await expect(listPendingOfflineTransactions(170)).resolves.toEqual([
+      expect.objectContaining({ id: "170:offline-transaction-key-0017", payload: { amount: "100.00" } })
+    ]);
     await expect(listPendingOfflineTransactions(290)).resolves.toHaveLength(1);
+    // A later sign-in can still add work and decrypt the original queue.
+    await enqueueOfflineTransaction(170, "offline-transaction-key-0018", { amount: "200.00" });
+    await expect(listPendingOfflineTransactions(170)).resolves.toHaveLength(2);
   });
 
   it("rejects blank account IDs and resource names", async () => {
