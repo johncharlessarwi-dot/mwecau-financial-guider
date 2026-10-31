@@ -65,11 +65,11 @@ class TransactionController extends Controller
         $idempotencyKey = $request->header('Idempotency-Key');
 
         if ($idempotencyKey === null) {
-            $transaction = $request->user()->transactions()->create($data + [
+            $transaction = DB::transaction(fn () => $request->user()->transactions()->create($data + [
                 'currency' => $account->currency,
                 'category' => $data['category'] ?? 'Other',
                 'status' => 'confirmed',
-            ]);
+            ]));
 
             return response()->json(['data' => $transaction->load('account:id,name,type,currency')], 201);
         }
@@ -174,15 +174,19 @@ class TransactionController extends Controller
         }
 
         $data['currency'] = $account->currency;
-        $transaction->update($data);
+        $updated = DB::transaction(function () use ($transaction, $data): Transaction {
+            $transaction->update($data);
 
-        return response()->json(['data' => $transaction->fresh()->load('account:id,name,type,currency')]);
+            return $transaction->fresh()->load('account:id,name,type,currency');
+        });
+
+        return response()->json(['data' => $updated]);
     }
 
     public function destroy(Request $request, Transaction $transaction): JsonResponse
     {
         abort_unless($transaction->user_id === $request->user()->id, 404);
-        $transaction->delete();
+        DB::transaction(fn () => $transaction->delete());
 
         return response()->json(['message' => 'Transaction deleted.']);
     }
