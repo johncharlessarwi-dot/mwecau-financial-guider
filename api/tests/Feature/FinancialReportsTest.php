@@ -29,7 +29,7 @@ class FinancialReportsTest extends TestCase
         Transaction::create(['user_id' => $user->id, 'account_id' => $usdAccount->id, 'type' => 'income', 'amount' => '50.25', 'currency' => 'USD', 'category' => 'Freelance', 'description' => 'USD work', 'occurred_at' => '2026-10-16 10:00:00', 'status' => 'confirmed']);
         Transaction::create(['user_id' => $other->id, 'account_id' => $otherAccount->id, 'type' => 'income', 'amount' => '999999.00', 'currency' => 'TZS', 'category' => 'Salary', 'description' => 'Foreign tenant', 'occurred_at' => '2026-10-15 10:00:00', 'status' => 'confirmed']);
 
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, ['read', 'write']);
         $this->getJson('/api/v1/reports/summary?from=2026-10-01&to=2026-10-31')
             ->assertOk()
             ->assertJsonPath('data.from', '2026-10-01')
@@ -46,7 +46,7 @@ class FinancialReportsTest extends TestCase
     {
         $this->getJson('/api/v1/reports/summary')->assertUnauthorized();
 
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), ['read', 'write']);
         $this->getJson('/api/v1/reports/summary?from=2026-11-01&to=2026-10-01')
             ->assertUnprocessable()->assertJsonValidationErrors('to');
         $this->getJson('/api/v1/reports/summary?from=2025-01-01&to=2026-10-31')
@@ -61,7 +61,7 @@ class FinancialReportsTest extends TestCase
         $account = $user->accounts()->create(['name' => 'Wallet', 'type' => 'cash', 'currency' => 'TZS', 'opening_balance' => 0]);
         Transaction::create(['user_id' => $user->id, 'account_id' => $account->id, 'type' => 'income', 'amount' => '1200.00', 'currency' => 'TZS', 'category' => 'Salary', 'description' => 'Salary', 'occurred_at' => '2026-10-10 10:00:00', 'status' => 'confirmed']);
 
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, ['read', 'write']);
         $this->getJson('/api/v1/reports/summary?currency=TZS')
             ->assertOk()
             ->assertJsonCount(1, 'data.currencies')
