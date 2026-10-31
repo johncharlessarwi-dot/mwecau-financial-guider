@@ -26,7 +26,7 @@ trap 'rm -f "$temporary"; unset MYSQL_PWD' EXIT
 
 mysqldump \
   --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USERNAME" \
-  --single-transaction --quick --routines --triggers --events \
+  --single-transaction --quick --routines --triggers --events --no-tablespaces \
   --hex-blob --default-character-set=utf8mb4 "$DB_DATABASE" \
   | gzip -9 \
   | age --recipient "$BACKUP_AGE_RECIPIENT" --output "$temporary"
