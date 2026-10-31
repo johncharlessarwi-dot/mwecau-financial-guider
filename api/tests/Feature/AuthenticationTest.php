@@ -135,6 +135,10 @@ class AuthenticationTest extends TestCase
 
         $this->assertDatabaseCount('personal_access_tokens', 0);
 
+        // Reset Laravel's in-memory guard between simulated HTTP requests so
+        // the second request must authenticate against the deleted token.
+        $this->app['auth']->forgetGuards();
+
         $this->withToken($plainTextToken)
             ->getJson('/api/v1/auth/me')
             ->assertUnauthorized();
