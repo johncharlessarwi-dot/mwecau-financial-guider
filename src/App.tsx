@@ -20,7 +20,7 @@ type ApiTransaction = { id:number; description:string; category:string; occurred
 const dateOnly = (value: Date) => `${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,"0")}-${String(value.getDate()).padStart(2,"0")}`;
 
 const money = (value: number, currency = "TZS") => new Intl.NumberFormat("en-TZ", {
-  style: "currency", currency, maximumFractionDigits: 0
+  style: "currency", currency, minimumFractionDigits: currency === "TZS" ? 0 : 2, maximumFractionDigits: currency === "TZS" ? 0 : 2
 }).format(value);
 
 function DashboardApp() {
@@ -271,7 +271,7 @@ function DashboardApp() {
           {tab === "Budgets" && <section className="panel full-panel">
             <div className="panel-heading"><div><h2>Budget management</h2><p>Set spending limits and monitor your recorded spending</p></div><button className="primary-btn" onClick={()=>{setBudgetFormOpen(v=>!v);setFormError("");}}><Plus size={15}/> Create budget</button></div>
             <div className="demo-notice">LIVE ACCOUNT DATA — budgets are stored securely in your account.</div>
-            <div className="budget-summary-grid"><div><small>Total planned</small><b>{money(budgets.reduce((n,b)=>n+b.limit,0))}</b></div><div><small>Spent so far</small><b>{money(budgets.reduce((n,b)=>n+b.spent,0))}</b></div><div><small>Remaining</small><b>{money(budgets.reduce((n,b)=>n+b.limit-b.spent,0))}</b></div></div>
+            <div className="budget-summary-grid"><div><small>Total planned</small><b>{money(budgets.filter(b=>b.currency==="TZS").reduce((n,b)=>n+b.limit,0))}</b></div><div><small>Spent so far</small><b>{money(budgets.filter(b=>b.currency==="TZS").reduce((n,b)=>n+b.spent,0))}</b></div><div><small>Remaining</small><b>{money(budgets.filter(b=>b.currency==="TZS").reduce((n,b)=>n+b.limit-b.spent,0))}</b></div></div>
             {budgetFormOpen && <form className="inline-management-form" onSubmit={saveBudget}>
               <label>Budget name<input required maxLength={80} value={budgetForm.name} onChange={e=>setBudgetForm({...budgetForm,name:e.target.value})} placeholder="e.g. Weekly groceries"/></label>
               <label>Expense category<select required value={budgetForm.category} onChange={e=>setBudgetForm({...budgetForm,category:e.target.value})}>{categories.filter(c=>c.active&&c.type==="expense").map(c=><option key={c.id} value={c.name}>{c.name}</option>)}</select></label>
