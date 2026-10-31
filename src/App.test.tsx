@@ -2,6 +2,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
+const offlineStoreMocks = vi.hoisted(() => ({ clearUserOfflineData: vi.fn() }));
+vi.mock("./lib/offlineStore", () => offlineStoreMocks);
+
 const signedInUser = { id: 7, name: "Test User", email: "test@example.com" };
 
 function mockAuthenticationApi() {
@@ -82,13 +85,21 @@ async function renderAuthenticatedApp() {
 }
 
 describe("MWECau GUIDER live finance workspace", () => {
-  beforeEach(() => vi.unstubAllGlobals());
+  beforeEach(() => { vi.unstubAllGlobals(); offlineStoreMocks.clearUserOfflineData.mockReset().mockResolvedValue(undefined); });
 
   it("requires authentication before rendering the finance workspace", async () => {
     mockAuthenticationApi();
     render(<App />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "Welcome back." })).toBeInTheDocument());
     expect(screen.queryByText("Recent transactions")).not.toBeInTheDocument();
+  });
+
+  it("clears the signed-in account's offline data before server logout", async () => {
+    await renderAuthenticatedApp();
+    fireEvent.click(screen.getByRole("button", {name:"Sign out"}));
+    await waitFor(() => expect(screen.getByRole("heading", {name:"Welcome back."})).toBeInTheDocument());
+    expect(offlineStoreMocks.clearUserOfflineData).toHaveBeenCalledOnce();
+    expect(offlineStoreMocks.clearUserOfflineData).toHaveBeenCalledWith(signedInUser.id);
   });
 
   it("loads the authenticated user's real account balance and ledger records", async () => {
