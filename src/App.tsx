@@ -13,7 +13,8 @@ type Tab = "Overview" | "Accounts" | "Transactions" | "Budgets" | "Categories" |
 type Category = { id:number; name:string; type:"income"|"expense"; system:boolean; active:boolean };
 type Budget = { id:number; name:string; category:string; categoryId:number | null; limit:number; spent:number; currency:string; period:string; startDate:string; endDate:string; active:boolean };
 type Account = { id:number; name:string; type:string; currency:string; openingBalance:number; currentBalance:number };
-type ApiTransaction = { id:number; description:string; category:string; occurred_at:string; amount:string|number; currency?:string; type:"income"|"expense"; account_id:number };\ntype FinancialReport = { from:string; to:string; currencies:Array<{currency:string;income:string;expenses:string;net_cash_flow:string;categories:Array<{type:"income"|"expense";category:string;amount:string}>}> };
+type ApiTransaction = { id:number; description:string; category:string; occurred_at:string; amount:string|number; currency?:string; type:"income"|"expense"; account_id:number };
+type FinancialReport = { from:string; to:string; currencies:Array<{currency:string;income:string;expenses:string;net_cash_flow:string;categories:Array<{type:"income"|"expense";category:string;amount:string}>}> };
 
 
 
@@ -44,7 +45,12 @@ function DashboardApp() {
   const [showForm, setShowForm] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [query, setQuery] = useState("");
-  const [language, setLanguage] = useState<"EN" | "SW">("EN");\n  const [report, setReport] = useState<FinancialReport | null>(null);\n  const [reportFrom, setReportFrom] = useState(()=>dateOnly(new Date(new Date().getFullYear(),new Date().getMonth(),1)));\n  const [reportTo, setReportTo] = useState(()=>dateOnly(new Date()));\n  const [reportLoading, setReportLoading] = useState(false);\n  const [reportError, setReportError] = useState("");
+  const [language, setLanguage] = useState<"EN" | "SW">("EN");
+  const [report, setReport] = useState<FinancialReport | null>(null);
+  const [reportFrom, setReportFrom] = useState(()=>dateOnly(new Date(new Date().getFullYear(),new Date().getMonth(),1)));
+  const [reportTo, setReportTo] = useState(()=>dateOnly(new Date()));
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState("");
   const [form, setForm] = useState({ title: "", amount: "", kind: "expense" as "income" | "expense", category: "", accountId: "" });
 
   const income = transactions.filter(t => t.kind === "income" && t.currency === "TZS").reduce((sum, t) => sum + t.amount, 0);
@@ -109,7 +115,16 @@ function DashboardApp() {
     { label: "AI Accountant", icon: Sparkles }
   ];
 
-  async function loadReport() {\n    setReportLoading(true); setReportError("");\n    try {\n      const result = await apiRequest<{data:FinancialReport}>(`/reports/summary?from=${encodeURIComponent(reportFrom)}&to=${encodeURIComponent(reportTo)}`);\n      setReport(result.data);\n    } catch(error) { setReportError(error instanceof Error ? error.message : "Could not load financial report."); }\n    finally { setReportLoading(false); }\n  }\n\n  async function addTransaction(event: React.FormEvent<HTMLFormElement>) {
+  async function loadReport() {
+    setReportLoading(true); setReportError("");
+    try {
+      const result = await apiRequest<{data:FinancialReport}>(`/reports/summary?from=${encodeURIComponent(reportFrom)}&to=${encodeURIComponent(reportTo)}`);
+      setReport(result.data);
+    } catch(error) { setReportError(error instanceof Error ? error.message : "Could not load financial report."); }
+    finally { setReportLoading(false); }
+  }
+
+  async function addTransaction(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const amount = Number(form.amount);
     if (!form.title.trim() || !Number.isFinite(amount) || amount <= 0 || !form.accountId) return;
