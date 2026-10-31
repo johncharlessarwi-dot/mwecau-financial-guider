@@ -45,7 +45,7 @@ class ReportController extends Controller
             ->selectRaw('currency, type, category, SUM(amount) as total')
             ->groupBy('currency', 'type', 'category')
             ->orderBy('currency')
-            ->orderBy('type')
+            ->orderByRaw("CASE WHEN type = 'expense' THEN 0 ELSE 1 END")
             ->orderBy('category')
             ->get();
 
