@@ -1,17 +1,17 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api;
+namespace App\Http\Controllers\Api;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Account;
-use App\\Models\\User;
-use Illuminate\\Database\\QueryException;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
-use Illuminate\\Validation\\Rule;
-use Illuminate\\Validation\\ValidationException;
+use App\Http\Controllers\Controller;
+use App\Models\Account;
+use App\Models\User;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class TransferController extends Controller
 {
@@ -90,7 +90,7 @@ class TransferController extends Controller
      * Create both ledger sides inside the caller's database transaction.
      *
      * @param array<string, mixed> $data
-     * @return array{0: \\App\\Models\\Transaction, 1: \\App\\Models\\Transaction}
+     * @return array{0: \App\Models\Transaction, 1: \App\Models\Transaction}
      */
     private function createTransferEntries(array $data, User $user): array
     {
@@ -145,7 +145,7 @@ class TransferController extends Controller
     }
 
     /**
-     * @param array{0: \\App\\Models\\Transaction, 1: \\App\\Models\\Transaction} $transfer
+     * @param array{0: \App\Models\Transaction, 1: \App\Models\Transaction} $transfer
      * @return array<string, mixed>
      */
     private function transferResponseBody(array $transfer): array
