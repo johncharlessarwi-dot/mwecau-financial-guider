@@ -69,7 +69,7 @@ describe("MWECau GUIDER dashboard", () => {
     fireEvent.change(screen.getByLabelText("Category name"), { target: { value: "Mobile data" } });
     fireEvent.click(screen.getByRole("button", { name: "Save category" }));
     fireEvent.click(screen.getAllByRole("button", { name: /Add transaction/i })[0]);
-    expect(screen.getByLabelText("Category")).toContainHTML("Mobile data");
+    expect(screen.getByRole("option", { name: "Mobile data" })).toBeInTheDocument();
   });
 
 });
