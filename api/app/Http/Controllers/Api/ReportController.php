@@ -22,7 +22,11 @@ class ReportController extends Controller
         $from = CarbonImmutable::parse($filters['from'] ?? now()->startOfMonth()->toDateString())->startOfDay();
         $to = CarbonImmutable::parse($filters['to'] ?? now()->toDateString())->endOfDay();
 
-        if ($to->lt($from)) {\n            throw ValidationException::withMessages(['to' => 'The end date must be on or after the start date.']);\n        }\n\n        if ($from->diffInDays($to) > 366) {
+        if ($to->lt($from)) {
+            throw ValidationException::withMessages(['to' => 'The end date must be on or after the start date.']);
+        }
+
+        if ($from->diffInDays($to) > 366) {
             throw ValidationException::withMessages(['to' => 'Report date ranges cannot exceed 366 days.']);
         }
 
