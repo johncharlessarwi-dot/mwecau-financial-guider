@@ -174,6 +174,22 @@ class AuthenticationTest extends TestCase
             ->assertForbidden();
     }
 
+
+    public function test_login_endpoint_rate_limits_repeated_failed_attempts(): void
+    {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => 'rate-limit@example.com',
+                'password' => 'incorrect-password',
+            ])->assertUnprocessable();
+        }
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'rate-limit@example.com',
+            'password' => 'incorrect-password',
+        ])->assertTooManyRequests();
+    }
+
     public function test_authenticated_endpoint_rejects_guest_requests(): void
     {
         $this->getJson('/api/v1/auth/me')->assertUnauthorized();
