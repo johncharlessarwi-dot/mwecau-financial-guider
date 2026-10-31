@@ -27,4 +27,37 @@ describe("MWECau GUIDER dashboard", () => {
     expect(screen.getAllByText("Groceries & essentials").length).toBeGreaterThan(0);
     expect(document.querySelectorAll(".transaction-row")).toHaveLength(1);
   });
+
+  it("creates a demo budget with a validated whole-number limit", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Budgets" }));
+    fireEvent.click(screen.getByRole("button", { name: /Create budget/i }));
+    fireEvent.change(screen.getByLabelText("Budget name"), { target: { value: "Emergency fund" } });
+    fireEvent.change(screen.getByLabelText("Limit (TZS)"), { target: { value: "50000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save budget" }));
+    expect(screen.getByText("Emergency fund")).toBeInTheDocument();
+    expect(screen.getByText(/changes stay in this page session/i)).toBeInTheDocument();
+  });
+
+  it("creates a custom category and allows deactivation without changing system categories", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Categories" }));
+    fireEvent.click(screen.getByRole("button", { name: /Add category/i }));
+    fireEvent.change(screen.getByLabelText("Category name"), { target: { value: "Mobile data" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save category" }));
+    expect(screen.getByText("Mobile data")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
+    expect(screen.getByText(/Custom category · Inactive/)).toBeInTheDocument();
+    expect(screen.getByText("Food")).toBeInTheDocument();
+  });
+
+  it("rejects duplicate category names within the same type", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Categories" }));
+    fireEvent.click(screen.getByRole("button", { name: /Add category/i }));
+    fireEvent.change(screen.getByLabelText("Category name"), { target: { value: "Food" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save category" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("That category already exists");
+  });
+
 });
