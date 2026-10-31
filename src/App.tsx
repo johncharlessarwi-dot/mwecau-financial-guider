@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest } from "./lib/api";
-import { readOfflineSnapshot, saveOfflineSnapshot } from "./lib/offlineStore";
+import { enqueueOfflineTransaction, listPendingOfflineTransactions, readOfflineSnapshot, saveOfflineSnapshot } from "./lib/offlineStore";
 import { createIdempotencyKey } from "./lib/idempotency";
 import { AuthGate, useAuth } from "./auth/AuthGate";
 import {
@@ -37,6 +37,8 @@ function DashboardApp() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState("");
+  const [offlineQueueNotice, setOfflineQueueNotice] = useState("");
+  const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [accountFormOpen, setAccountFormOpen] = useState(false);
   const [accountForm, setAccountForm] = useState({name:"",type:"cash",openingBalance:"0"});
@@ -120,7 +122,13 @@ function DashboardApp() {
     }
   };
 
-  useEffect(()=>{ void refreshFinanceData(); },[]);
+  useEffect(()=>{
+    void refreshFinanceData();
+    void listPendingOfflineTransactions(user.id).then((items) => {
+      setPendingOfflineCount(items.length);
+      if (items.length > 0) setOfflineQueueNotice(items.length + " transaction(s) are safely stored on this device and waiting for sync.");
+    }).catch(() => undefined);
+  },[]);
 
 
   const nav: { label: Tab; icon: typeof LayoutDashboard }[] = [
@@ -167,7 +175,27 @@ function DashboardApp() {
       pendingTransaction.current = null;
       setForm({title:"",amount:"",kind:"expense",category:categories.find(x=>x.type==="expense"&&x.active)?.name??"",accountId:form.accountId});
       setShowForm(false); setTab("Transactions"); await refreshFinanceData();
-    } catch(error) { setFormError(error instanceof Error?error.message:"Could not save transaction."); }
+    } catch(error) {
+      const message = error instanceof Error ? error.message : "Could not save transaction.";
+      const networkFailure = !navigator.onLine || /finance API could not be reached|network/i.test(message);
+      if (networkFailure && pendingTransaction.current) {
+        try {
+          const queuedPayload = JSON.parse(pendingTransaction.current.body) as Record<string, unknown>;
+          await enqueueOfflineTransaction(user.id, pendingTransaction.current.key, queuedPayload);
+          const pendingItems = await listPendingOfflineTransactions(user.id);
+          setPendingOfflineCount(pendingItems.length);
+          pendingTransaction.current = null;
+          setForm({title:"",amount:"",kind:"expense",category:categories.find(x=>x.type==="expense"&&x.active)?.name??"",accountId:form.accountId});
+          setShowForm(false);
+          setTab("Transactions");
+          setOfflineQueueNotice("Transaction saved in encrypted offline storage. It is pending sync; do not enter it again.");
+        } catch(queueError) {
+          setFormError(queueError instanceof Error ? queueError.message : "Could not save the transaction offline.");
+        }
+      } else {
+        setFormError(message);
+      }
+    }
     finally { setSaving(false); }
   }
 
@@ -263,6 +291,7 @@ function DashboardApp() {
           </section>
 
           {dataError && <div className="inline-error" role="alert">{dataError} <button className="text-btn" onClick={()=>void refreshFinanceData()}>Retry</button></div>}
+          {offlineQueueNotice && <div className="demo-notice" role="status">{offlineQueueNotice} {pendingOfflineCount > 0 && <b>Pending: {pendingOfflineCount}</b>}</div>}
           {loadingData && <div className="demo-notice">Loading your private financial records…</div>}
           {tab === "Overview" && <>
             <section className="balance-grid">
