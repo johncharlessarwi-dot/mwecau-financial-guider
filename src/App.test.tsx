@@ -101,7 +101,7 @@ describe("MWECau GUIDER live finance workspace", () => {
     await renderAuthenticatedApp();
     fireEvent.click(screen.getAllByRole("button", { name: /Add transaction/i })[0]);
     fireEvent.change(screen.getByLabelText("Description"), {target:{value:"Test payment"}});
-    fireEvent.change(screen.getByLabelText("Amount"), {target:{value:"15000"}});
+    fireEvent.change(screen.getByLabelText(/Amount \(TZS\)/), {target:{value:"15000"}});
     fireEvent.click(screen.getByRole("button",{name:/Save entry/i}));
     await waitFor(()=>expect(screen.getByText("Test payment")).toBeInTheDocument());
     expect(vi.mocked(fetch).mock.calls.some(([url,init])=>String(url).includes("/api/v1/transactions")&&init?.method==="POST")).toBe(true);
