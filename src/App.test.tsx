@@ -77,7 +77,7 @@ async function renderAuthenticatedApp() {
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "test-password" } });
   fireEvent.click(screen.getByRole("button", { name: "Sign in securely" }));
   await waitFor(() => expect(screen.getByRole("heading", { name: "Your money, in focus." })).toBeInTheDocument());
-  await waitFor(() => expect(screen.getByText("Everyday wallet")).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("Groceries & essentials")).toBeInTheDocument());
 }
 
 describe("MWECau GUIDER live finance workspace", () => {
