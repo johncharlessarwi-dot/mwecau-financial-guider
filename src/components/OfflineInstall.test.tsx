@@ -37,7 +37,7 @@ describe("PWA connectivity and installation controls", () => {
   it("requests installation and reflects an accepted browser choice", async () => {
     render(<OfflineInstall />);
     const { event, prompt } = installEvent("accepted");
-    window.dispatchEvent(event);
+    act(() => window.dispatchEvent(event));
 
     fireEvent.click(screen.getByRole("button", { name: /Install app/i }));
 
@@ -49,7 +49,7 @@ describe("PWA connectivity and installation controls", () => {
   it("keeps the app installable after a dismissed prompt", async () => {
     render(<OfflineInstall />);
     const { event } = installEvent("dismissed");
-    window.dispatchEvent(event);
+    act(() => window.dispatchEvent(event));
 
     fireEvent.click(screen.getByRole("button", { name: /Install app/i }));
 
