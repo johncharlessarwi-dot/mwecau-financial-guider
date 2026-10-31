@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest } from "./lib/api";
+import { readOfflineSnapshot, saveOfflineSnapshot } from "./lib/offlineStore";
 import { createIdempotencyKey } from "./lib/idempotency";
 import { AuthGate, useAuth } from "./auth/AuthGate";
 import {
@@ -16,6 +17,7 @@ type Budget = { id:number; name:string; category:string; categoryId:number | nul
 type Account = { id:number; name:string; type:string; currency:string; openingBalance:number; currentBalance:number };
 type ApiTransaction = { id:number; description:string; category:string; occurred_at:string; amount:string|number; currency?:string; type:"income"|"expense"; account_id:number };
 type FinancialReport = { from:string; to:string; currencies:Array<{currency:string;income:string;expenses:string;net_cash_flow:string;categories:Array<{type:"income"|"expense";category:string;amount:string}>}> };
+type OfflineDashboardSnapshot = { accounts: Account[]; categories: Category[]; transactions: Transaction[]; budgets: Budget[] };
 
 
 
@@ -97,8 +99,22 @@ function DashboardApp() {
       setBudgets(nextBudgets);
       setForm(current=>({...current,accountId:current.accountId || String(nextAccounts[0]?.id ?? ""),category:current.category || nextCategories.find(x=>x.type==="expense"&&x.active)?.name || ""}));
       setBudgetForm(current=>({...current,category:current.category || nextCategories.find(x=>x.type==="expense"&&x.active)?.name || ""}));
+      await saveOfflineSnapshot(user.id, "finance-dashboard", {
+        accounts: nextAccounts, categories: nextCategories, transactions: nextTransactions, budgets: nextBudgets
+      }).catch(() => undefined);
     } catch (error) {
-      setDataError(error instanceof Error ? error.message : "Unable to load your financial records.");
+      const snapshot = await readOfflineSnapshot<OfflineDashboardSnapshot>(user.id, "finance-dashboard").catch(() => null);
+      if (snapshot) {
+        setAccounts(snapshot.accounts);
+        setCategories(snapshot.categories);
+        setTransactions(snapshot.transactions);
+        setBudgets(snapshot.budgets);
+        setForm(current=>({...current,accountId:current.accountId || String(snapshot.accounts[0]?.id ?? ""),category:current.category || snapshot.categories.find(x=>x.type==="expense"&&x.active)?.name || ""}));
+        setBudgetForm(current=>({...current,category:current.category || snapshot.categories.find(x=>x.type==="expense"&&x.active)?.name || ""}));
+        setDataError("Offline mode: showing your last saved encrypted financial snapshot. Changes and live balances require an internet connection.");
+      } else {
+        setDataError(error instanceof Error ? error.message : "Unable to load your financial records.");
+      }
     } finally {
       setLoadingData(false);
     }
