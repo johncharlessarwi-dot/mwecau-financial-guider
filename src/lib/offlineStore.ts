@@ -17,13 +17,14 @@ export type PendingOfflineTransaction = {
 };
 
 const DATABASE_NAME = "mwecau-guider-private-offline";
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const database = request.result;
+      const transaction = request.transaction;
       if (!database.objectStoreNames.contains("keys")) {
         database.createObjectStore("keys", { keyPath: "userId" });
       }
@@ -34,6 +35,20 @@ function openDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains("outbox")) {
         const outbox = database.createObjectStore("outbox", { keyPath: "id" });
         outbox.createIndex("userId", "userId", { unique: false });
+      }
+      if (event.oldVersion < 3 && !database.objectStoreNames.contains("outboxKeys")) {
+        const outboxKeys = database.createObjectStore("outboxKeys", { keyPath: "userId" });
+        // Preserve decryptability of transactions queued by database versions 1–2.
+        // Copy existing non-extractable CryptoKeys inside the version-change transaction.
+        const cursorRequest = transaction?.objectStore("keys").openCursor();
+        if (cursorRequest) {
+          cursorRequest.onsuccess = () => {
+            const cursor = cursorRequest.result;
+            if (!cursor) return;
+            outboxKeys.put(cursor.value);
+            cursor.continue();
+          };
+        }
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -67,9 +82,9 @@ function fromBase64(value: string): Uint8Array {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-async function getOrCreateUserKey(database: IDBDatabase, userId: string): Promise<CryptoKey> {
+async function getOrCreateUserKey(database: IDBDatabase, userId: string, storeName: "keys" | "outboxKeys" = "keys"): Promise<CryptoKey> {
   const existing = await requestValue<StoredKey | undefined>(
-    database.transaction("keys", "readonly").objectStore("keys").get(userId)
+    database.transaction(storeName, "readonly").objectStore(storeName).get(userId)
   );
   if (existing) return existing.key;
 
@@ -80,16 +95,14 @@ async function getOrCreateUserKey(database: IDBDatabase, userId: string): Promis
   );
 
   try {
-    const transaction = database.transaction("keys", "readwrite");
+    const transaction = database.transaction(storeName, "readwrite");
     const completed = transactionDone(transaction);
-    transaction.objectStore("keys").add({ userId, key: generated } satisfies StoredKey);
+    transaction.objectStore(storeName).add({ userId, key: generated } satisfies StoredKey);
     await completed;
     return generated;
   } catch {
-    // Another tab may have created the user's key first. Always use the key
-    // that won the unique userId insert so ciphertext remains decryptable.
     const winner = await requestValue<StoredKey | undefined>(
-      database.transaction("keys", "readonly").objectStore("keys").get(userId)
+      database.transaction(storeName, "readonly").objectStore(storeName).get(userId)
     );
     if (winner) return winner.key;
     throw new Error("Unable to create the private offline encryption key.");
@@ -118,24 +131,14 @@ function normalizeUserId(userId: string | number): string {
   return normalized;
 }
 
-export async function saveOfflineSnapshot(
-  userId: string | number,
-  resource: string,
-  value: unknown
-): Promise<void> {
+export async function saveOfflineSnapshot(userId: string | number, resource: string, value: unknown): Promise<void> {
   const accountId = normalizeUserId(userId);
   if (!resource.trim()) throw new Error("A snapshot resource name is required.");
-
   const database = await openDatabase();
   try {
     const key = await getOrCreateUserKey(database, accountId);
     const encrypted = await encryptValue(key, value);
-    const record: EncryptedRecord = {
-      id: `${accountId}:${resource}`,
-      userId: accountId,
-      ...encrypted,
-      updatedAt: Date.now()
-    };
+    const record: EncryptedRecord = { id: `${accountId}:${resource}`, userId: accountId, ...encrypted, updatedAt: Date.now() };
     const transaction = database.transaction("snapshots", "readwrite");
     const completed = transactionDone(transaction);
     transaction.objectStore("snapshots").put(record);
@@ -145,10 +148,7 @@ export async function saveOfflineSnapshot(
   }
 }
 
-export async function readOfflineSnapshot<T>(
-  userId: string | number,
-  resource: string
-): Promise<T | null> {
+export async function readOfflineSnapshot<T>(userId: string | number, resource: string): Promise<T | null> {
   const accountId = normalizeUserId(userId);
   const database = await openDatabase();
   try {
@@ -156,76 +156,63 @@ export async function readOfflineSnapshot<T>(
       database.transaction("snapshots", "readonly").objectStore("snapshots").get(`${accountId}:${resource}`)
     );
     if (!record) return null;
-
     const storedKey = await requestValue<StoredKey | undefined>(
       database.transaction("keys", "readonly").objectStore("keys").get(accountId)
     );
     if (!storedKey) return null;
-
     return await decryptValue<T>(storedKey.key, record);
   } finally {
     database.close();
   }
 }
 
+/**
+ * Revoke access to cached private snapshots on logout/session expiry without
+ * deleting user-created pending transactions. The outbox has its own key so
+ * queued writes remain encrypted and recoverable after the next sign-in.
+ */
 export async function clearUserOfflineData(userId: string | number): Promise<void> {
   const accountId = normalizeUserId(userId);
   const database = await openDatabase();
   try {
-    const transaction = database.transaction(["keys", "snapshots", "outbox"], "readwrite");
+    const transaction = database.transaction(["keys", "snapshots"], "readwrite");
     const completed = transactionDone(transaction);
     transaction.objectStore("keys").delete(accountId);
-
-    for (const storeName of ["snapshots", "outbox"]) {
-      const store = transaction.objectStore(storeName);
-      const request = store.getAll();
-      request.onsuccess = () => {
-        for (const record of request.result as Array<{id:string;userId:string}>) {
-          if (record.userId === accountId) store.delete(record.id);
-        }
-      };
-    }
+    const snapshots = transaction.objectStore("snapshots");
+    const request = snapshots.index("userId").openCursor(IDBKeyRange.only(accountId));
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      cursor.delete();
+      cursor.continue();
+    };
     await completed;
   } finally {
     database.close();
   }
 }
 
-export async function enqueueOfflineTransaction(
-  userId: string | number,
-  idempotencyKey: string,
-  payload: Record<string, unknown>
-): Promise<void> {
+export async function enqueueOfflineTransaction(userId: string | number, idempotencyKey: string, payload: Record<string, unknown>): Promise<void> {
   const accountId = normalizeUserId(userId);
   if (idempotencyKey.length < 16 || idempotencyKey.length > 128) {
     throw new Error("A valid idempotency key is required for the offline transaction queue.");
   }
-
   const database = await openDatabase();
   try {
     const id = accountId + ":" + idempotencyKey;
     const outbox = database.transaction("outbox", "readonly").objectStore("outbox");
     const existingRecords = await requestValue<EncryptedOutboxRecord[]>(outbox.getAll());
     const existing = existingRecords.find((record) => record.id === id && record.userId === accountId);
+    const key = await getOrCreateUserKey(database, accountId, "outboxKeys");
     if (existing) {
-      const key = await getOrCreateUserKey(database, accountId);
       const previous = await decryptValue<Record<string, unknown>>(key, existing);
       if (JSON.stringify(previous) !== JSON.stringify(payload)) {
         throw new Error("This offline transaction key is already assigned to a different payload.");
       }
       return;
     }
-
-    const key = await getOrCreateUserKey(database, accountId);
     const encrypted = await encryptValue(key, payload);
-    const record: EncryptedOutboxRecord = {
-      id,
-      userId: accountId,
-      idempotencyKey,
-      ...encrypted,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
+    const record: EncryptedOutboxRecord = { id, userId: accountId, idempotencyKey, ...encrypted, createdAt: Date.now(), updatedAt: Date.now() };
     const transaction = database.transaction("outbox", "readwrite");
     const completed = transactionDone(transaction);
     transaction.objectStore("outbox").add(record);
@@ -235,9 +222,7 @@ export async function enqueueOfflineTransaction(
   }
 }
 
-export async function listPendingOfflineTransactions(
-  userId: string | number
-): Promise<PendingOfflineTransaction[]> {
+export async function listPendingOfflineTransactions(userId: string | number): Promise<PendingOfflineTransaction[]> {
   const accountId = normalizeUserId(userId);
   const database = await openDatabase();
   try {
@@ -246,12 +231,10 @@ export async function listPendingOfflineTransactions(
     );
     const records = allRecords.filter((record) => record.userId === accountId);
     if (records.length === 0) return [];
-
     const storedKey = await requestValue<StoredKey | undefined>(
-      database.transaction("keys", "readonly").objectStore("keys").get(accountId)
+      database.transaction("outboxKeys", "readonly").objectStore("outboxKeys").get(accountId)
     );
     if (!storedKey) return [];
-
     return await Promise.all(records.map(async (record) => ({
       id: record.id,
       idempotencyKey: record.idempotencyKey,
