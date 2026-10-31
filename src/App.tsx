@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest } from "./lib/api";
 import { enqueueOfflineTransaction, listPendingOfflineTransactions, readOfflineSnapshot, saveOfflineSnapshot } from "./lib/offlineStore";
+import { syncPendingOfflineTransactions } from "./lib/offlineSync";
 import { createIdempotencyKey } from "./lib/idempotency";
 import { AuthGate, useAuth } from "./auth/AuthGate";
 import {
@@ -39,6 +40,8 @@ function DashboardApp() {
   const [dataError, setDataError] = useState("");
   const [offlineQueueNotice, setOfflineQueueNotice] = useState("");
   const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
+  const [isSyncingOffline, setIsSyncingOffline] = useState(false);
+  const syncInProgress = useRef(false);
   const [saving, setSaving] = useState(false);
   const [accountFormOpen, setAccountFormOpen] = useState(false);
   const [accountForm, setAccountForm] = useState({name:"",type:"cash",openingBalance:"0"});
@@ -122,12 +125,50 @@ function DashboardApp() {
     }
   };
 
+  const syncOfflineQueue = async () => {
+    if (!navigator.onLine || syncInProgress.current) return;
+    syncInProgress.current = true;
+    setIsSyncingOffline(true);
+    try {
+      const result = await syncPendingOfflineTransactions(user.id, (payload, idempotencyKey) =>
+        apiRequest("/transactions", {
+          method: "POST",
+          headers: { "Idempotency-Key": idempotencyKey },
+          body: JSON.stringify(payload)
+        })
+      );
+      setPendingOfflineCount(result.remaining);
+      if (result.synced > 0) {
+        setOfflineQueueNotice(result.synced + " offline transaction(s) synchronized successfully.");
+        await refreshFinanceData();
+      }
+      if (result.blockedBy) {
+        setOfflineQueueNotice(result.remaining + " transaction(s) remain pending. Sync paused: " + result.blockedBy);
+      } else if (result.remaining === 0 && result.synced === 0) {
+        setOfflineQueueNotice("");
+      } else if (result.remaining === 0) {
+        setOfflineQueueNotice("All queued transactions are synchronized.");
+      }
+    } catch (error) {
+      setOfflineQueueNotice(error instanceof Error ? "Offline sync paused: " + error.message : "Offline sync could not be completed.");
+    } finally {
+      setIsSyncingOffline(false);
+      syncInProgress.current = false;
+    }
+  };
+
   useEffect(()=>{
     void refreshFinanceData();
     void listPendingOfflineTransactions(user.id).then((items) => {
       setPendingOfflineCount(items.length);
-      if (items.length > 0) setOfflineQueueNotice(items.length + " transaction(s) are safely stored on this device and waiting for sync.");
+      if (items.length > 0) {
+        setOfflineQueueNotice(items.length + " transaction(s) are safely stored on this device and waiting for sync.");
+        if (navigator.onLine) void syncOfflineQueue();
+      }
     }).catch(() => undefined);
+    const handleOnline = () => { void syncOfflineQueue(); };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
   },[]);
 
 
@@ -291,7 +332,7 @@ function DashboardApp() {
           </section>
 
           {dataError && <div className="inline-error" role="alert">{dataError} <button className="text-btn" onClick={()=>void refreshFinanceData()}>Retry</button></div>}
-          {offlineQueueNotice && <div className="demo-notice" role="status">{offlineQueueNotice} {pendingOfflineCount > 0 && <b>Pending: {pendingOfflineCount}</b>}</div>}
+          {offlineQueueNotice && <div className="demo-notice" role="status">{offlineQueueNotice} {pendingOfflineCount > 0 && <><b>Pending: {pendingOfflineCount}</b> <button className="text-btn" onClick={()=>void syncOfflineQueue()} disabled={isSyncingOffline}>{isSyncingOffline ? "Syncing…" : "Sync now"}</button></>}</div>}
           {loadingData && <div className="demo-notice">Loading your private financial records…</div>}
           {tab === "Overview" && <>
             <section className="balance-grid">

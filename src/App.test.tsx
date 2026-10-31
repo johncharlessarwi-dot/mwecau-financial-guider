@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
-const offlineStoreMocks = vi.hoisted(() => ({ clearUserOfflineData: vi.fn(), saveOfflineSnapshot: vi.fn(), readOfflineSnapshot: vi.fn(), enqueueOfflineTransaction: vi.fn(), listPendingOfflineTransactions: vi.fn() }));
+const offlineStoreMocks = vi.hoisted(() => ({ clearUserOfflineData: vi.fn(), saveOfflineSnapshot: vi.fn(), readOfflineSnapshot: vi.fn(), enqueueOfflineTransaction: vi.fn(), listPendingOfflineTransactions: vi.fn(), removeOfflineTransaction: vi.fn() }));
 vi.mock("./lib/offlineStore", () => offlineStoreMocks);
 
 const signedInUser = { id: 7, name: "Test User", email: "test@example.com" };
@@ -85,7 +85,7 @@ async function renderAuthenticatedApp() {
 }
 
 describe("MWECau GUIDER live finance workspace", () => {
-  beforeEach(() => { vi.unstubAllGlobals(); offlineStoreMocks.clearUserOfflineData.mockReset().mockResolvedValue(undefined); offlineStoreMocks.saveOfflineSnapshot.mockReset().mockResolvedValue(undefined); offlineStoreMocks.readOfflineSnapshot.mockReset().mockResolvedValue(null); offlineStoreMocks.enqueueOfflineTransaction.mockReset().mockResolvedValue(undefined); offlineStoreMocks.listPendingOfflineTransactions.mockReset().mockResolvedValue([]); });
+  beforeEach(() => { vi.unstubAllGlobals(); offlineStoreMocks.clearUserOfflineData.mockReset().mockResolvedValue(undefined); offlineStoreMocks.saveOfflineSnapshot.mockReset().mockResolvedValue(undefined); offlineStoreMocks.readOfflineSnapshot.mockReset().mockResolvedValue(null); offlineStoreMocks.enqueueOfflineTransaction.mockReset().mockResolvedValue(undefined); offlineStoreMocks.listPendingOfflineTransactions.mockReset().mockResolvedValue([]); offlineStoreMocks.removeOfflineTransaction.mockReset().mockResolvedValue(undefined); });
 
   it("requires authentication before rendering the finance workspace", async () => {
     mockAuthenticationApi();
@@ -212,6 +212,29 @@ describe("MWECau GUIDER live finance workspace", () => {
     expect(userId).toBe(signedInUser.id);
     expect(key).toMatch(/^[0-9a-f]{32}$/);
     expect(payload).toEqual(expect.objectContaining({description:"Offline queued payment",amount:"3200.00"}));
+  });
+
+  it("automatically syncs pending transactions when the app starts online", async () => {
+    const queued = {
+      id:"7:offline-sync-key-0001",
+      idempotencyKey:"offline-sync-key-0001",
+      payload:{account_id:1,type:"expense",amount:"700.00",currency:"TZS",category:"Food",description:"Synced offline purchase",occurred_at:"2026-10-31T08:00:00.000Z"},
+      createdAt:1
+    };
+    offlineStoreMocks.listPendingOfflineTransactions
+      .mockResolvedValueOnce([queued])
+      .mockResolvedValueOnce([queued])
+      .mockResolvedValueOnce([]);
+
+    await renderAuthenticatedApp();
+
+    await waitFor(() => expect(offlineStoreMocks.removeOfflineTransaction).toHaveBeenCalledWith(signedInUser.id,queued.id));
+    const syncCall = vi.mocked(fetch).mock.calls.find(([url,init]) =>
+      String(url).includes("/api/v1/transactions") && (init?.method || "GET").toUpperCase() === "POST"
+    );
+    expect(syncCall).toBeDefined();
+    expect(new Headers(syncCall?.[1]?.headers).get("Idempotency-Key")).toBe(queued.idempotencyKey);
+    expect(await screen.findByText(/All queued transactions are synchronized/i)).toBeInTheDocument();
   });
 
   it("creates a server-backed account", async () => {
