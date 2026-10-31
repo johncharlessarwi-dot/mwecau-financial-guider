@@ -8,19 +8,19 @@ import {
   Target, TrendingUp, Wallet, X
 } from "lucide-react";
 
-type Transaction = { id: number; title: string; category: string; date: string; amount: number; kind: "income" | "expense" };
+type Transaction = { id: number; title: string; category: string; date: string; amount: number; currency:string; kind: "income" | "expense" };
 type Tab = "Overview" | "Accounts" | "Transactions" | "Budgets" | "Categories" | "Reports" | "AI Accountant";
 type Category = { id:number; name:string; type:"income"|"expense"; system:boolean; active:boolean };
 type Budget = { id:number; name:string; category:string; categoryId:number | null; limit:number; spent:number; currency:string; period:string; startDate:string; endDate:string; active:boolean };
 type Account = { id:number; name:string; type:string; currency:string; openingBalance:number; currentBalance:number };
-type ApiTransaction = { id:number; description:string; category:string; occurred_at:string; amount:string|number; type:"income"|"expense"; account_id:number };
+type ApiTransaction = { id:number; description:string; category:string; occurred_at:string; amount:string|number; currency?:string; type:"income"|"expense"; account_id:number };
 
 
 
 const dateOnly = (value: Date) => `${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,"0")}-${String(value.getDate()).padStart(2,"0")}`;
 
-const money = (value: number) => new Intl.NumberFormat("en-TZ", {
-  style: "currency", currency: "TZS", maximumFractionDigits: 0
+const money = (value: number, currency = "TZS") => new Intl.NumberFormat("en-TZ", {
+  style: "currency", currency, maximumFractionDigits: 0
 }).format(value);
 
 function DashboardApp() {
@@ -47,11 +47,11 @@ function DashboardApp() {
   const [language, setLanguage] = useState<"EN" | "SW">("EN");
   const [form, setForm] = useState({ title: "", amount: "", kind: "expense" as "income" | "expense", category: "", accountId: "" });
 
-  const income = transactions.filter(t => t.kind === "income").reduce((sum, t) => sum + t.amount, 0);
-  const expenses = transactions.filter(t => t.kind === "expense").reduce((sum, t) => sum + t.amount, 0);
+  const income = transactions.filter(t => t.kind === "income" && t.currency === "TZS").reduce((sum, t) => sum + t.amount, 0);
+  const expenses = transactions.filter(t => t.kind === "expense" && t.currency === "TZS").reduce((sum, t) => sum + t.amount, 0);
   const balance = accounts.filter(a=>a.currency==="TZS").reduce((sum,a)=>sum+a.currentBalance,0);
-  const totalBudget = budgets.filter(b=>b.active).reduce((sum,b)=>sum+b.limit,0);
-  const totalSpent = budgets.filter(b=>b.active).reduce((sum,b)=>sum+b.spent,0);
+  const totalBudget = budgets.filter(b=>b.active&&b.currency==="TZS").reduce((sum,b)=>sum+b.limit,0);
+  const totalSpent = budgets.filter(b=>b.active&&b.currency==="TZS").reduce((sum,b)=>sum+b.spent,0);
   const budgetPercent = totalBudget > 0 ? Math.min(100, totalSpent / totalBudget * 100) : 0;
   const filtered = useMemo(() => transactions.filter(t => (t.title + t.category).toLowerCase().includes(query.toLowerCase())), [transactions, query]);
 
@@ -75,7 +75,7 @@ function DashboardApp() {
       }));
       const nextTransactions: Transaction[] = transactionResult.data.map(item=>({
         id:Number(item.id),title:item.description,category:item.category,date:new Date(item.occurred_at).toLocaleString(),
-        amount:Number(item.amount),kind:item.type
+        amount:Number(item.amount),currency:item.currency??"TZS",kind:item.type
       }));
       const nextBudgets: Budget[] = budgetResult.data.map((item:any)=>({
         id:Number(item.id),name:String(item.name),category:item.category?.name ?? "All expenses",
@@ -240,7 +240,7 @@ function DashboardApp() {
                 <div className="budget-total"><strong>{money(totalSpent)}</strong><span>of {money(totalBudget)}</span></div>
                 <div className="progress-track"><div style={{ width: `${budgetPercent}%` }} /></div>
                 <div className="budget-caption"><span>{Math.round(budgetPercent)}% used</span><b>{money(totalBudget-totalSpent)} left</b></div>
-                <div className="budget-categories">{budgets.filter(b=>b.active).slice(0,4).map((b,i)=><BudgetLine key={b.id} label={b.name} amount={money(b.spent)} percent={b.limit>0?Math.min(100,Math.round(b.spent/b.limit*100)):0} color={["blue","purple","orange","blue"][i]} />)}</div>
+                <div className="budget-categories">{budgets.filter(b=>b.active).slice(0,4).map((b,i)=><BudgetLine key={b.id} label={b.name} amount={money(b.spent,b.currency)} percent={b.limit>0?Math.min(100,Math.round(b.spent/b.limit*100)):0} color={["blue","purple","orange","blue"][i]} />)}</div>
                 <button className="secondary-btn" onClick={() => setTab("Budgets")}>Manage budgets</button>
               </article>
             </section>
@@ -278,7 +278,7 @@ function DashboardApp() {
               <label>Monthly limit (TZS)<input required type="number" min="1" step="0.01" value={budgetForm.limit} onChange={e=>setBudgetForm({...budgetForm,limit:e.target.value})} placeholder="e.g. 150000"/></label>
               {formError&&<p className="inline-error" role="alert">{formError}</p>}<div className="inline-form-actions"><button type="button" className="secondary-btn" onClick={()=>setBudgetFormOpen(false)}>Cancel</button><button type="submit" className="primary-btn" disabled={saving}>{saving?"Saving…":"Save budget"}</button></div>
             </form>}
-            <div className="managed-budgets">{budgets.filter(b=>b.active).map(b=>{const pct=b.limit>0?Math.round(b.spent/b.limit*100):0;return <article className="managed-budget" key={b.id}><div className="managed-budget-head"><div><b>{b.name}</b><small>{b.category}</small></div><strong>{money(b.spent)} <span>/ {money(b.limit)}</span></strong></div><div className="progress-track"><div className={pct>=100?"over-budget":pct>=80?"near-budget":""} style={{width:`${Math.min(pct,100)}%`}}/></div><div className="managed-budget-foot"><span>{pct}% used</span><span>{pct>100?money(b.spent-b.limit)+" over":money(b.limit-b.spent)+" remaining"}</span><button className="text-btn" onClick={()=>void removeBudget(b.id)} disabled={saving}>Deactivate</button></div></article>})}</div>
+            <div className="managed-budgets">{budgets.filter(b=>b.active).map(b=>{const pct=b.limit>0?Math.round(b.spent/b.limit*100):0;return <article className="managed-budget" key={b.id}><div className="managed-budget-head"><div><b>{b.name}</b><small>{b.category}</small></div><strong>{money(b.spent,b.currency)} <span>/ {money(b.limit,b.currency)}</span></strong></div><div className="progress-track"><div className={pct>=100?"over-budget":pct>=80?"near-budget":""} style={{width:`${Math.min(pct,100)}%`}}/></div><div className="managed-budget-foot"><span>{pct}% used</span><span>{pct>100?money(b.spent-b.limit)+" over":money(b.limit-b.spent)+" remaining"}</span><button className="text-btn" onClick={()=>void removeBudget(b.id)} disabled={saving}>Deactivate</button></div></article>})}</div>
           </section>}
           {tab === "Categories" && <section className="panel full-panel">
             <div className="panel-heading"><div><h2>Category management</h2><p>Organise income and expense labels used in your ledger</p></div><button className="primary-btn" onClick={()=>{setCategoryFormOpen(v=>!v);setFormError("");}}><Plus size={15}/> Add category</button></div>
@@ -297,14 +297,14 @@ function DashboardApp() {
         </div>
       </main>
 
-      {showForm && <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setShowForm(false); }}><section className="transaction-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-heading"><div><span className="eyebrow">LEDGER ENTRY</span><h2 id="modal-title">Add transaction</h2></div><button className="icon-btn" aria-label="Close dialog" onClick={() => setShowForm(false)}><X size={20}/></button></div><form onSubmit={addTransaction}><label>Account<select required value={form.accountId} onChange={e=>setForm({...form,accountId:e.target.value})}>{accounts.map(a=><option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</select></label><label>Transaction type<select value={form.kind} onChange={e => { const kind=e.target.value as "income"|"expense"; const first=categories.find(c=>c.active&&c.type===kind); setForm({...form,kind,category:first?.name??""}); }}><option value="expense">Expense</option><option value="income">Income</option></select></label><label>Description<input required maxLength={80} value={form.title} onChange={e => setForm({...form,title:e.target.value})} placeholder="e.g. Electricity bill"/></label><label>Amount<input required type="number" min="0.01" step="0.01" value={form.amount} onChange={e => setForm({...form,amount:e.target.value})} placeholder="Enter amount"/></label><label>Category<select value={form.category} onChange={e => setForm({...form,category:e.target.value})}>{categories.filter(c=>c.active&&c.type===form.kind).map(c=><option key={c.id} value={c.name}>{c.name}</option>)}</select></label><div className="modal-actions"><button type="button" className="secondary-btn" onClick={() => setShowForm(false)}>Cancel</button><button type="submit" className="primary-btn" disabled={saving||!accounts.length}>{saving?"Saving…":<><Check size={16}/> Save entry</>}</button></div>{formError&&<p className="inline-error" role="alert">{formError}</p>}<p className="form-disclaimer">Transactions are submitted to your authenticated account and saved on the server.</p></form></section></div>}
+      {showForm && <div className="modal-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setShowForm(false); }}><section className="transaction-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-heading"><div><span className="eyebrow">LEDGER ENTRY</span><h2 id="modal-title">Add transaction</h2></div><button className="icon-btn" aria-label="Close dialog" onClick={() => setShowForm(false)}><X size={20}/></button></div><form onSubmit={addTransaction}><label>Account<select required value={form.accountId} onChange={e=>setForm({...form,accountId:e.target.value})}>{accounts.map(a=><option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</select></label><label>Transaction type<select value={form.kind} onChange={e => { const kind=e.target.value as "income"|"expense"; const first=categories.find(c=>c.active&&c.type===kind); setForm({...form,kind,category:first?.name??""}); }}><option value="expense">Expense</option><option value="income">Income</option></select></label><label>Description<input required maxLength={80} value={form.title} onChange={e => setForm({...form,title:e.target.value})} placeholder="e.g. Electricity bill"/></label><label>Amount ({accounts.find(a=>a.id===Number(form.accountId))?.currency ?? "TZS"})<input required type="number" min="0.01" step="0.01" value={form.amount} onChange={e => setForm({...form,amount:e.target.value})} placeholder="Enter amount"/></label><label>Category<select value={form.category} onChange={e => setForm({...form,category:e.target.value})}>{categories.filter(c=>c.active&&c.type===form.kind).map(c=><option key={c.id} value={c.name}>{c.name}</option>)}</select></label><div className="modal-actions"><button type="button" className="secondary-btn" onClick={() => setShowForm(false)}>Cancel</button><button type="submit" className="primary-btn" disabled={saving||!accounts.length}>{saving?"Saving…":<><Check size={16}/> Save entry</>}</button></div>{formError&&<p className="inline-error" role="alert">{formError}</p>}<p className="form-disclaimer">Transactions are submitted to your authenticated account and saved on the server.</p></form></section></div>}
     </div>
   );
 }
 
 function TransactionList({ items }: { items: Transaction[] }) {
   if (!items.length) return <p className="empty-state">No transactions yet. Add your first entry to get started.</p>;
-  return <div className="transaction-list">{items.map(item => <div className="transaction-row" key={item.id}><div className={`transaction-icon ${item.kind}`}>{item.kind === "income" ? <ArrowDownLeft size={17}/> : <CreditCard size={16}/>}</div><div className="transaction-name"><b>{item.title}</b><small>{item.category} <i>·</i> {item.date}</small></div><strong className={item.kind === "income" ? "positive" : "amount-out"}>{item.kind === "income" ? "+" : "−"}{money(item.amount)}</strong></div>)}</div>;
+  return <div className="transaction-list">{items.map(item => <div className="transaction-row" key={item.id}><div className={`transaction-icon ${item.kind}`}>{item.kind === "income" ? <ArrowDownLeft size={17}/> : <CreditCard size={16}/>}</div><div className="transaction-name"><b>{item.title}</b><small>{item.category} <i>·</i> {item.date}</small></div><strong className={item.kind === "income" ? "positive" : "amount-out"}>{item.kind === "income" ? "+" : "−"}{money(item.amount,item.currency)}</strong></div>)}</div>;
 }
 
 function BudgetLine({label, amount, percent, color}: {label:string;amount:string;percent:number;color:string}) {
