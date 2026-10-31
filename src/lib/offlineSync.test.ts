@@ -77,6 +77,15 @@ describe("offline transaction synchronization", () => {
     });
   });
 
+  it("aborts synchronization immediately when the server rejects the session", async () => {
+    offlineMocks.listPendingOfflineTransactions.mockResolvedValueOnce([first]);
+    const sender = vi.fn().mockRejectedValue(Object.assign(new Error("Session expired."), { status: 401 }));
+
+    await expect(syncPendingOfflineTransactions(7, sender)).rejects.toMatchObject({ status: 401 });
+    expect(sender).toHaveBeenCalledOnce();
+    expect(offlineMocks.removeOfflineTransaction).not.toHaveBeenCalled();
+  });
+
   it("does not call the server when there are no pending transactions", async () => {
     offlineMocks.listPendingOfflineTransactions.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
     const sender = vi.fn();
