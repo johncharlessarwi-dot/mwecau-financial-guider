@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearUserOfflineData,
+  enqueueOfflineTransaction,
+  listPendingOfflineTransactions,
   readOfflineSnapshot,
+  removeOfflineTransaction,
   saveOfflineSnapshot
 } from "./offlineStore";
 
@@ -56,6 +59,47 @@ describe("encrypted account-scoped offline snapshots", () => {
 
     await expect(readOfflineSnapshot(17, "dashboard")).resolves.toBeNull();
     await expect(readOfflineSnapshot(29, "dashboard")).resolves.toEqual({ balance: 9000 });
+  });
+
+  it("queues encrypted transactions and returns the decrypted pending payload", async () => {
+    const payload = {account_id:4,type:"expense",amount:"1500.00",description:"Offline bus fare",occurred_at:"2026-10-31T08:00:00.000Z"};
+    await enqueueOfflineTransaction(17,"offline-transaction-key-0001",payload);
+
+    await expect(listPendingOfflineTransactions(17)).resolves.toEqual([
+      expect.objectContaining({id:"17:offline-transaction-key-0001",idempotencyKey:"offline-transaction-key-0001",payload})
+    ]);
+  });
+
+  it("does not duplicate a queued transaction when the same key and payload are submitted again", async () => {
+    const payload = {account_id:4,type:"expense",amount:"1500.00"};
+    await enqueueOfflineTransaction(17,"offline-transaction-key-0002",payload);
+    await enqueueOfflineTransaction(17,"offline-transaction-key-0002",payload);
+
+    await expect(listPendingOfflineTransactions(17)).resolves.toHaveLength(1);
+  });
+
+  it("rejects reuse of an offline key with a different payload", async () => {
+    await enqueueOfflineTransaction(17,"offline-transaction-key-0003",{amount:"100.00"});
+    await expect(enqueueOfflineTransaction(17,"offline-transaction-key-0003",{amount:"200.00"}))
+      .rejects.toThrow("already assigned to a different payload");
+  });
+
+  it("keeps pending transactions isolated by account", async () => {
+    await enqueueOfflineTransaction(17,"offline-transaction-key-0004",{amount:"100.00"});
+    await enqueueOfflineTransaction(29,"offline-transaction-key-0005",{amount:"900.00"});
+
+    await expect(listPendingOfflineTransactions(17)).resolves.toHaveLength(1);
+    await expect(listPendingOfflineTransactions(29)).resolves.toHaveLength(1);
+  });
+
+  it("removes only the selected account's queued transaction", async () => {
+    await enqueueOfflineTransaction(17,"offline-transaction-key-0006",{amount:"100.00"});
+    await enqueueOfflineTransaction(29,"offline-transaction-key-0007",{amount:"900.00"});
+
+    await removeOfflineTransaction(17,"17:offline-transaction-key-0006");
+
+    await expect(listPendingOfflineTransactions(17)).resolves.toHaveLength(0);
+    await expect(listPendingOfflineTransactions(29)).resolves.toHaveLength(1);
   });
 
   it("rejects blank account IDs and resource names", async () => {
