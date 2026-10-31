@@ -26,7 +26,7 @@ This runbook is for the Laravel API, MySQL database, and Vite/PWA frontend. The 
 Example (only after replacing bucket/prefix and authenticating to the correct cloud account):
 aws s3api put-bucket-lifecycle-configuration --bucket YOUR_PRIVATE_BUCKET --lifecycle-configuration file://infra/aws/s3-backup-lifecycle.json
 
-The checked-in script uses S3 server-side AES256 as an additional storage setting. For production, configure bucket default SSE-KMS and verify the bucket policy enforces it. The sample lifecycle file is a template and must be adjusted if the bucket prefix differs.
+The checked-in uploader defaults to S3 server-side KMS encryption (aws:kms); set BACKUP_S3_KMS_KEY_ID when a customer-managed key is required. AES256 is an explicit alternative via BACKUP_S3_SSE=AES256. Configure the bucket policy to enforce the approved encryption mode. The sample lifecycle file is a template and must be adjusted if the bucket prefix differs.
 
 ## 2. Real staging restore drill
 
