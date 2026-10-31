@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest } from "./lib/api";
+import { createIdempotencyKey } from "./lib/idempotency";
 import { AuthGate, useAuth } from "./auth/AuthGate";
 import {
   Activity, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Bell,
@@ -26,6 +27,7 @@ const money = (value: number, currency = "TZS") => new Intl.NumberFormat("en-TZ"
 
 function DashboardApp() {
   const { user, logout } = useAuth();
+  const pendingTransaction = useRef<{ fingerprint: string; key: string } | null>(null);
   const [tab, setTab] = useState<Tab>("Overview");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -130,10 +132,16 @@ function DashboardApp() {
     if (!form.title.trim() || !Number.isFinite(amount) || amount <= 0 || !form.accountId) return;
     setSaving(true); setFormError("");
     try {
-      await apiRequest("/transactions",{method:"POST",body:JSON.stringify({
+      const payload = {
         account_id:Number(form.accountId),type:form.kind,amount:amount.toFixed(2),currency:accounts.find(a=>a.id===Number(form.accountId))?.currency ?? "TZS",
         category:form.category,description:form.title.trim(),occurred_at:new Date().toISOString()
-      })});
+      };
+      const fingerprint = JSON.stringify(payload);
+      if (!pendingTransaction.current || pendingTransaction.current.fingerprint !== fingerprint) {
+        pendingTransaction.current = { fingerprint, key: createIdempotencyKey() };
+      }
+      await apiRequest("/transactions",{method:"POST",headers:{"Idempotency-Key":pendingTransaction.current.key},body:JSON.stringify(payload)});
+      pendingTransaction.current = null;
       setForm({title:"",amount:"",kind:"expense",category:categories.find(x=>x.type==="expense"&&x.active)?.name??"",accountId:form.accountId});
       setShowForm(false); setTab("Transactions"); await refreshFinanceData();
     } catch(error) { setFormError(error instanceof Error?error.message:"Could not save transaction."); }
