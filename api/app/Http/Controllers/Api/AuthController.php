@@ -15,13 +15,14 @@ class AuthController extends Controller
 {
     public function register(Request $request): JsonResponse
     {
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email:rfc', 'max:190', 'unique:users,email'],
             'password' => ['required', 'string', 'min:10', 'max:128'],
         ]);
 
-        $data['email'] = mb_strtolower(trim($data['email']));
         $user = User::create($data);
 
         Auth::guard('web')->login($user);
@@ -34,12 +35,14 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $data = $request->validate([
             'email' => ['required', 'email:rfc'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', mb_strtolower(trim($data['email'])))->first();
+        $user = User::where('email', $data['email'])->first();
 
         if (! $user || ! Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages([
@@ -52,6 +55,33 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => $user->only(['id', 'name', 'email']),
+        ]);
+    }
+
+    public function createMobileToken(Request $request): JsonResponse
+    {
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
+        $data = $request->validate([
+            'email' => ['required', 'email:rfc'],
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'email' => ['The supplied credentials are invalid.'],
+            ]);
+        }
+
+        $token = $user->createToken('mobile-client', ['*'], now()->addDays(30))->plainTextToken;
+
+        return response()->json([
+            'user' => $user->only(['id', 'name', 'email']),
+            'token' => $token,
+            'token_type' => 'Bearer',
+            'expires_at' => now()->addDays(30)->toISOString(),
         ]);
     }
 
