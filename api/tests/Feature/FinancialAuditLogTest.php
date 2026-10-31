@@ -139,7 +139,7 @@ class FinancialAuditLogTest extends TestCase
 
         $this->actingAs($user)->withoutExceptionHandling();
         AuditLog::creating(static function (): void {
-            throw new \\RuntimeException('Audit log persistence failed.');
+            throw new \RuntimeException('Audit log persistence failed.');
         });
 
         $this->expectAuditFailure(fn () => $this->postJson('/api/v1/accounts', [
@@ -181,7 +181,7 @@ class FinancialAuditLogTest extends TestCase
         try {
             $operation();
             $this->fail('Expected audit log persistence failure.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertSame('Audit log persistence failed.', $exception->getMessage());
         }
     }
