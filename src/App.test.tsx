@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
-const offlineStoreMocks = vi.hoisted(() => ({ clearUserOfflineData: vi.fn() }));
+const offlineStoreMocks = vi.hoisted(() => ({ clearUserOfflineData: vi.fn(), saveOfflineSnapshot: vi.fn(), readOfflineSnapshot: vi.fn() }));
 vi.mock("./lib/offlineStore", () => offlineStoreMocks);
 
 const signedInUser = { id: 7, name: "Test User", email: "test@example.com" };
@@ -85,13 +85,48 @@ async function renderAuthenticatedApp() {
 }
 
 describe("MWECau GUIDER live finance workspace", () => {
-  beforeEach(() => { vi.unstubAllGlobals(); offlineStoreMocks.clearUserOfflineData.mockReset().mockResolvedValue(undefined); });
+  beforeEach(() => { vi.unstubAllGlobals(); offlineStoreMocks.clearUserOfflineData.mockReset().mockResolvedValue(undefined); offlineStoreMocks.saveOfflineSnapshot.mockReset().mockResolvedValue(undefined); offlineStoreMocks.readOfflineSnapshot.mockReset().mockResolvedValue(null); });
 
   it("requires authentication before rendering the finance workspace", async () => {
     mockAuthenticationApi();
     render(<App />);
     await waitFor(() => expect(screen.getByRole("heading", { name: "Welcome back." })).toBeInTheDocument());
     expect(screen.queryByText("Recent transactions")).not.toBeInTheDocument();
+  });
+
+  it("saves the latest authenticated finance data as an encrypted offline snapshot", async () => {
+    await renderAuthenticatedApp();
+    expect(offlineStoreMocks.saveOfflineSnapshot).toHaveBeenCalledWith(
+      signedInUser.id,
+      "finance-dashboard",
+      expect.objectContaining({
+        accounts: expect.arrayContaining([expect.objectContaining({name:"Everyday wallet"})]),
+        transactions: expect.arrayContaining([expect.objectContaining({title:"Groceries & essentials"})])
+      })
+    );
+  });
+
+  it("restores the last saved dashboard snapshot when the finance API is unavailable", async () => {
+    await renderAuthenticatedApp();
+    offlineStoreMocks.readOfflineSnapshot.mockResolvedValue({
+      accounts:[{id:1,name:"Offline wallet",type:"cash",currency:"TZS",openingBalance:10000,currentBalance:9500}],
+      categories:[],
+      transactions:[{id:99,title:"Offline cached payment",category:"Food",date:"2026-10-31",amount:500,currency:"TZS",kind:"expense"}],
+      budgets:[]
+    });
+    const fetchMock = vi.mocked(fetch);
+    const originalFetch = fetchMock.getMockImplementation();
+    if (!originalFetch) throw new Error("Expected the authenticated API mock to be installed.");
+    fetchMock.mockImplementation(async (input, init) => {
+      if (String(input).includes("/api/v1/")) throw new TypeError("Failed to fetch");
+      return originalFetch(input, init);
+    });
+
+    fireEvent.click(screen.getByRole("button",{name:"Transactions"}));
+    fireEvent.click(screen.getByRole("button",{name:/Refresh/i}));
+    await waitFor(() => expect(screen.getByText("Offline cached payment")).toBeInTheDocument());
+    expect(screen.getByText(/Offline mode: showing your last saved encrypted financial snapshot/i)).toBeInTheDocument();
+    expect(offlineStoreMocks.readOfflineSnapshot).toHaveBeenCalledWith(signedInUser.id,"finance-dashboard");
   });
 
   it("clears the signed-in account's offline data before server logout", async () => {
