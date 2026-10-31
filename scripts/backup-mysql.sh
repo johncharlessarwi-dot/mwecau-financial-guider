@@ -33,7 +33,7 @@ mysqldump \
 
 test -s "$temporary"
 mv "$temporary" "$output"
-sha256sum "$output" > "$output.sha256"
+(cd "$BACKUP_DIR" && sha256sum "$(basename "$output")" > "$(basename "$output").sha256")
 chmod 600 "$output" "$output.sha256"
 unset MYSQL_PWD
 trap - EXIT
