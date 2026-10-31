@@ -57,6 +57,8 @@ cp "$backup_file" "$tampered_file"
 printf 'tampered' >> "$tampered_file"
 printf '%s  %s\\n' "$expected_hash" "$(basename "$tampered_file")" > "$tampered_file.sha256"
 export BACKUP_FILE="$tampered_file"
+export AGE_IDENTITY_FILE="$temporary_root/identity"
+export RESTORE_CONFIRM="YES"
 export RESTORE_CAPTURE_FILE="$temporary_root/tampered.sql"
 
 if bash "$root/scripts/restore-mysql.sh" >/dev/null 2>&1; then
