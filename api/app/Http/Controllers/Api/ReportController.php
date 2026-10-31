@@ -47,8 +47,8 @@ class ReportController extends Controller
         $currencies = collect(['TZS', 'USD'])
             ->filter(fn (string $currency) => !isset($filters['currency']) || $filters['currency'] === $currency)
             ->map(function (string $currency) use ($totals, $categories): array {
-                $income = $this->toCents((string) ($totals->firstWhere(fn ($row) => $row->currency === $currency && $row->type === 'income')?->total ?? '0'));
-                $expenses = $this->toCents((string) ($totals->firstWhere(fn ($row) => $row->currency === $currency && $row->type === 'expense')?->total ?? '0'));
+                $income = $this->toCents((string) ($totals->first(fn ($row) => $row->currency === $currency && $row->type === 'income')?->total ?? '0'));
+                $expenses = $this->toCents((string) ($totals->first(fn ($row) => $row->currency === $currency && $row->type === 'expense')?->total ?? '0'));
                 $breakdown = $categories->where('currency', $currency)->map(fn ($row) => [
                     'type' => $row->type,
                     'category' => $row->category,
