@@ -63,17 +63,14 @@ class BudgetController extends Controller
         $data = $request->validate([
             'category_id' => ['sometimes', 'nullable', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('type', 'expense')->where('is_active', true)->where(fn ($scope) => $scope->whereNull('user_id')->where('is_system', true)->orWhere('user_id', $request->user()->id)))],
             'name' => [$required, 'string', 'min:2', 'max:80'],
-            'amount' => [$required, 'numeric', 'gt:0', 'max:9999999999999999.99'],
-            'currency' => [$required],
+            'amount' => [$required, 'numeric', 'decimal:0,2', 'gt:0', 'max:9999999999999999.99'],
+            'currency' => [$required, Rule::in(['TZS', 'USD'])],
             'period' => [$required, 'in:weekly,monthly,yearly,custom'],
             'start_date' => [$required, 'date'],
             'end_date' => [$required, 'date'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
-        if (isset($data['currency']) && ! in_array($data['currency'], ['TZS', 'USD'], true)) {
-            throw ValidationException::withMessages(['currency' => 'The selected currency is invalid.']);
-        }
 
         $startDate = $data['start_date'] ?? $existing?->start_date?->toDateString();
         $endDate = $data['end_date'] ?? $existing?->end_date?->toDateString();
