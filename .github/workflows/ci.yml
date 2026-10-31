@@ -85,7 +85,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Send CI result to repository owner
-        if: ${{ secrets.SMTP_PASSWORD != '' }}
         env:
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
@@ -99,6 +98,10 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RECIPIENT: johncharlessarwi@gmail.com
         run: |
+          if [ -z "$SMTP_PASSWORD" ]; then
+            echo "Email notification skipped: configure SMTP GitHub Actions secrets."
+            exit 0
+          fi
           python3 - <<'PY'
           import os
           import smtplib
@@ -129,6 +132,3 @@ jobs:
               smtp.send_message(msg)
           print(f"CI {status} email sent to {os.environ['RECIPIENT']}")
           PY
-      - name: Explain skipped email notification
-        if: ${{ secrets.SMTP_PASSWORD == '' }}
-        run: echo "Email notification skipped because SMTP GitHub Actions secrets are not configured."
