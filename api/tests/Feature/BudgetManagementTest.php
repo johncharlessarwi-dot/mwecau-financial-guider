@@ -36,7 +36,7 @@ class BudgetManagementTest extends TestCase
         Transaction::create(array_merge($base, ['amount' => 50000, 'category' => 'Food', 'currency' => 'USD']));
         Transaction::create(array_merge($base, ['amount' => 50000, 'category' => 'Food', 'occurred_at' => '2026-11-01 10:00:00']));
 
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, ['read', 'write']);
         $this->getJson('/api/v1/budgets')->assertOk()
             ->assertJsonPath('data.0.id', $budget->id)
             ->assertJsonPath('data.0.spent_amount', '25000.00')
@@ -54,7 +54,7 @@ class BudgetManagementTest extends TestCase
             'name' => 'Private budget', 'amount' => 1000, 'currency' => 'TZS',
             'period' => 'monthly', 'start_date' => '2026-10-01', 'end_date' => '2026-10-31',
         ]);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, ['read', 'write']);
 
         $this->postJson('/api/v1/budgets', [
             'category_id' => $foreignCategory->id, 'name' => 'Bad', 'amount' => 1000,
@@ -68,7 +68,7 @@ class BudgetManagementTest extends TestCase
 
     public function test_budget_rejects_invalid_ranges_and_amounts(): void
     {
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), ['read', 'write']);
         $payload = ['name' => 'Monthly', 'amount' => 0, 'currency' => 'TZS', 'period' => 'monthly', 'start_date' => '2026-10-31', 'end_date' => '2026-10-01'];
         $this->postJson('/api/v1/budgets', $payload)->assertUnprocessable();
     }
@@ -85,7 +85,7 @@ class BudgetManagementTest extends TestCase
             'end_date' => '2026-10-31',
         ]);
 
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, ['read', 'write']);
 
         $this->patchJson('/api/v1/budgets/'.$budget->id, ['end_date' => '2026-09-30'])
             ->assertUnprocessable()
@@ -102,7 +102,7 @@ class BudgetManagementTest extends TestCase
 
     public function test_budget_rejects_unsupported_currency(): void
     {
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), ['read', 'write']);
 
         $this->postJson('/api/v1/budgets', [
             'name' => 'Unsupported currency',
@@ -116,7 +116,7 @@ class BudgetManagementTest extends TestCase
 
     public function test_budget_rejects_amounts_with_more_than_two_decimal_places(): void
     {
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), ['read', 'write']);
 
         $this->postJson('/api/v1/budgets', [
             'name' => 'Precise budget',
