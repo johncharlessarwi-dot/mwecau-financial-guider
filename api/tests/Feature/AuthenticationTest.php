@@ -118,6 +118,48 @@ class AuthenticationTest extends TestCase
     }
 
 
+
+    public function test_mobile_token_logout_revokes_the_token_and_prevents_reuse(): void
+    {
+        $user = User::factory()->create();
+        $plainTextToken = $user->createToken('revocable-device', ['read', 'write'])->plainTextToken;
+
+        $this->withToken($plainTextToken)
+            ->getJson('/api/v1/auth/me')
+            ->assertOk();
+
+        $this->withToken($plainTextToken)
+            ->postJson('/api/v1/auth/logout')
+            ->assertOk()
+            ->assertJsonPath('message', 'Session revoked.');
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+
+        // Reset Laravel's in-memory guard between simulated HTTP requests so
+        // the second request must authenticate against the deleted token.
+        $this->app['auth']->forgetGuards();
+
+        $this->withToken($plainTextToken)
+            ->getJson('/api/v1/auth/me')
+            ->assertUnauthorized();
+    }
+
+    public function test_expired_mobile_token_cannot_access_authenticated_endpoints(): void
+    {
+        $user = User::factory()->create();
+        $expiredToken = $user->createToken(
+            'expired-device',
+            ['read', 'write'],
+            now()->subMinute()
+        )->plainTextToken;
+
+        $this->withToken($expiredToken)
+            ->getJson('/api/v1/auth/me')
+            ->assertUnauthorized();
+
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+    }
+
     public function test_read_only_mobile_token_cannot_mutate_financial_resources(): void
     {
         $user = User::factory()->create();
