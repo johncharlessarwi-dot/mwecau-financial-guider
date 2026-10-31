@@ -18,7 +18,10 @@ describe("AuthGate offline data access revocation", () => {
     offlineMocks.clearUserOfflineData.mockClear().mockResolvedValue(undefined);
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith("/sanctum/csrf-cookie")) {\n        return new Response(null, { status: 204 });\n      }\n      if (url.endsWith("/auth/me")) {
+      if (url.endsWith("/sanctum/csrf-cookie")) {
+        return new Response(null, { status: 204 });
+      }
+      if (url.endsWith("/auth/me")) {
         return new Response(JSON.stringify({ message: "Unauthenticated." }), { status: 401 });
       }
       if (url.endsWith("/auth/login")) {
