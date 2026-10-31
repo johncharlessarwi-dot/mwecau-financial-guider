@@ -175,6 +175,22 @@ class AuthenticationTest extends TestCase
     }
 
 
+
+    public function test_authenticated_transaction_reads_are_rate_limited(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('read-rate-limit-test', ['read'])->plainTextToken;
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.77']);
+
+        for ($attempt = 0; $attempt < 60; $attempt++) {
+            $this->withToken($token)->getJson('/api/v1/transactions')->assertOk();
+        }
+
+        $this->withToken($token)
+            ->getJson('/api/v1/transactions')
+            ->assertTooManyRequests();
+    }
+
     public function test_login_endpoint_rate_limits_repeated_failed_attempts(): void
     {
         for ($attempt = 0; $attempt < 10; $attempt++) {
