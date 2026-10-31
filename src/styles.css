@@ -71,3 +71,15 @@
 .report-category-row strong{font-size:10px;color:#52627a}
 .report-empty{font-size:10px;color:#8996a8;padding:15px 0}
 @media(max-width:600px){.report-filters{align-items:stretch;flex-direction:column}.report-filters input{width:100%}.report-filters .primary-btn{justify-content:center}.report-currency-heading{align-items:flex-start;flex-direction:column}.report-stats{grid-template-columns:1fr}}
+
+
+/* PWA connectivity and install controls */
+.connectivity-strip{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 24px);padding:7px 11px;border:1px solid #dce5f1;border-radius:999px;background:#ffffffed;box-shadow:0 5px 20px #17284614;color:#52627a;font-size:10px;backdrop-filter:blur(12px)}
+.connectivity-state{display:inline-flex;align-items:center;gap:5px;font-weight:700;white-space:nowrap}
+.is-online .connectivity-state{color:#16845f}
+.is-offline{border-color:#f1d9b4;background:#fffaf0;color:#80602a;border-radius:12px}
+.is-offline .connectivity-state{color:#b56b20}
+.connectivity-message{line-height:1.4}
+.install-app-btn{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:999px;background:#315fe0;color:white;padding:6px 9px;font-size:9px;font-weight:700;white-space:nowrap}
+.installed-label{font-size:9px;color:#16845f;white-space:nowrap}
+@media(max-width:600px){.connectivity-strip{top:7px;font-size:9px;gap:7px;padding:6px 9px}.connectivity-message{max-width:210px}}
