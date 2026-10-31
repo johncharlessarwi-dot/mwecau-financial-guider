@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AuthGate, useAuth } from "./auth/AuthGate";
 import {
   Activity, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Bell, BookOpen,
   CalendarDays, Check, ChevronDown, CircleHelp, CreditCard, Download,
@@ -23,7 +24,7 @@ const money = (value: number) => new Intl.NumberFormat("en-TZ", {
   style: "currency", currency: "TZS", maximumFractionDigits: 0
 }).format(value);
 
-function App() {
+function DashboardApp() {\n  const { user, logout } = useAuth();
   const [tab, setTab] = useState<Tab>("Overview");
   const [transactions, setTransactions] = useState(initialTransactions);
   const [categories, setCategories] = useState<Category[]>([
@@ -94,7 +95,7 @@ function App() {
           <div className="security-note"><ShieldCheck size={17} /><div><b>Your money, your control</b><small>Privacy-first by design</small></div></div>
           <button className="nav-item"><Settings size={18} /><span>Settings</span></button>
           <button className="nav-item"><CircleHelp size={18} /><span>Help centre</span></button>
-          <div className="profile"><div className="avatar">JS</div><div><b>Personal workspace</b><small>Free account · Demo</small></div><ChevronDown size={15} /></div>
+          <div className="profile"><div className="avatar">JS</div><div><b>{user.name}</b><small>{user.email}</small></div><ChevronDown size={15} /></div>
         </div>
       </aside>
 
@@ -103,10 +104,10 @@ function App() {
           <button className="icon-btn mobile-menu" aria-label="Open navigation" onClick={() => setMobileNav(true)}><Menu size={21} /></button>
           <div className="breadcrumbs">Workspace <span>/</span> <b>{tab}</b></div>
           <div className="top-actions">
-            <span className="demo-pill"><span /> DEMO DATA</span>
+            <span className="demo-pill"><span /> AUTHENTICATED · DEMO LEDGER</span>
             <button className="language-btn" onClick={() => setLanguage(language === "EN" ? "SW" : "EN")}>{language} <ChevronDown size={14} /></button>
             <button className="icon-btn notification-btn" aria-label="Notifications"><Bell size={18} /><i /></button>
-            <div className="avatar top-avatar">JS</div>
+            <span className="signed-in-label">{user.name}</span><button className="signout-btn" onClick={() => void logout()}>Sign out</button>
           </div>
         </header>
 
@@ -204,4 +205,4 @@ function BudgetLine({label, amount, percent, color}: {label:string;amount:string
   return <div className="budget-line"><div><span>{label}</span><b>{amount}</b></div><div className="progress-track"><div className={color} style={{width:`${percent}%`}}/></div></div>;
 }
 
-export default App;
+export default function App() { return <AuthGate><DashboardApp /></AuthGate>; }
