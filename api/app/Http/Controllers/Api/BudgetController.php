@@ -1,13 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\\Http\\Controllers\\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Budget;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\\Http\\Controllers\\Controller;
+use App\\Models\\Budget;
+use Carbon\\Carbon;
+use Illuminate\\Database\\Eloquent\\Builder;
+use Illuminate\\Http\\JsonResponse;
+use Illuminate\\Http\\Request;
+use Illuminate\\Validation\\Rule;
+use Illuminate\\Validation\\ValidationException;
 
 class BudgetController extends Controller
 {
@@ -40,7 +42,7 @@ class BudgetController extends Controller
     public function update(Request $request, int $budget): JsonResponse
     {
         $record = $request->user()->budgets()->whereKey($budget)->firstOrFail();
-        $data = $this->validatedData($request, true);
+        $data = $this->validatedData($request, true, $record);
         $record->update($data);
 
         return response()->json(['data' => $this->withProgress($request, $record->fresh()->load('category:id,name,type'))]);
@@ -54,7 +56,7 @@ class BudgetController extends Controller
         return response()->json(['message' => 'Budget deactivated.']);
     }
 
-    private function validatedData(Request $request, bool $partial = false): array
+    private function validatedData(Request $request, bool $partial = false, ?Budget $existing = null): array
     {
         $required = $partial ? 'sometimes|required' : 'required';
 
@@ -62,12 +64,23 @@ class BudgetController extends Controller
             'category_id' => ['sometimes', 'nullable', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('type', 'expense')->where('is_active', true)->where(fn ($scope) => $scope->whereNull('user_id')->where('is_system', true)->orWhere('user_id', $request->user()->id)))],
             'name' => [$required, 'string', 'min:2', 'max:80'],
             'amount' => [$required, 'numeric', 'gt:0', 'max:9999999999999999.99'],
-            'currency' => [$required === 'required' ? 'sometimes' : 'sometimes', 'required', 'in:TZS,USD'],
+            'currency' => [$required],
             'period' => [$required, 'in:weekly,monthly,yearly,custom'],
             'start_date' => [$required, 'date'],
-            'end_date' => [$required, 'date', 'after_or_equal:start_date'],
+            'end_date' => [$required, 'date'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
+
+        if (isset($data['currency']) && ! in_array($data['currency'], ['TZS', 'USD'], true)) {
+            throw ValidationException::withMessages(['currency' => 'The selected currency is invalid.']);
+        }
+
+        $startDate = $data['start_date'] ?? $existing?->start_date?->toDateString();
+        $endDate = $data['end_date'] ?? $existing?->end_date?->toDateString();
+
+        if ($startDate !== null && $endDate !== null && Carbon::parse($endDate)->lt(Carbon::parse($startDate))) {
+            throw ValidationException::withMessages(['end_date' => 'The end date must be on or after the start date.']);
+        }
 
         return $data;
     }
