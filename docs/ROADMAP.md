@@ -38,7 +38,9 @@ Delivery is organized into independently committed subfeatures. Each batch must 
 - [ ] Budget, savings, and debt reports
 - [ ] PDF and spreadsheet export
 
-Initial Batch 4 delivery includes authenticated, date-filtered ledger summaries and currency-separated category breakdowns. Trend charts, preset period filters, PDF/spreadsheet exports, and financial health scoring remain open.\n\n## Batch 5 — AI personal accountant
+Initial Batch 4 delivery includes authenticated, date-filtered ledger summaries and currency-separated category breakdowns. Trend charts, preset period filters, PDF/spreadsheet exports, and financial health scoring remain open.
+
+## Batch 5 — AI personal accountant
 - [ ] Provider-independent server-side AI adapter
 - [ ] Authorized financial context retrieval
 - [ ] Kiswahili and English chat
