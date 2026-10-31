@@ -10,10 +10,14 @@ This checklist separates repository/CI evidence from production operations. A gr
 - [x] Web production build completes, including PWA build verification.
 - [x] Laravel Composer manifest validation passes.
 - [x] PHP dependency audit completes without known advisories.
-- [x] Laravel feature tests pass for authentication, authorization, tenant isolation, ledger behavior, transfers, idempotency, and financial audit events.
+- [x] Laravel feature tests pass on both SQLite and MySQL 8.4 for authentication, authorization, tenant isolation, ledger behavior, transfers, idempotency, and financial audit events.
+- [x] Financial account and transaction writes roll back if audit-log persistence fails; transfer debit/credit pairs roll back together.
 - [x] Backup and restore shell scripts pass Bash syntax validation.
-- [x] Login rate limiting, mobile token expiry, and token revocation have regression tests.
+- [x] CI exercises real age encryption/decryption, SHA-256 verification, tamper rejection, and explicit restore confirmation using a non-production fixture.
+- [x] Login and authenticated read rate limits, mobile token expiry, and token revocation have regression tests.
 - [x] Offline queue tests verify AES-GCM encryption, separate snapshot/outbox keys, preservation on session expiry, retry ordering, and stable idempotency keys.
+- [x] Client-side offline sync integration tests cover successful delivery, network failure, session expiry, and retry after a lost response.
+- [x] Financial report category ordering is deterministic across SQLite and MySQL 8.4.
 
 ## Production work still requiring infrastructure or operator access
 
