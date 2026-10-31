@@ -54,6 +54,8 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+      - name: Validate backup and recovery shell scripts
+        run: bash -n ../scripts/backup-mysql.sh ../scripts/restore-mysql.sh
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
