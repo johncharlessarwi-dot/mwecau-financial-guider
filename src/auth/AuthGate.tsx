@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { LockKeyhole, Mail, ShieldCheck, UserRound, Wallet } from "lucide-react";
+import { clearUserOfflineData } from "../lib/offlineStore";
 
 export type AuthUser = { id: number; name: string; email: string };
 type AuthContextValue = { user: AuthUser; logout: () => Promise<void> };
@@ -107,9 +108,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    if (!user) return;
+    // Clear the signed-in account's encrypted local records before ending the session.
+    await clearUserOfflineData(user.id);
     await request<{ message: string }>("/auth/logout", { method: "POST" });
     setUser(null);
-  }, []);
+  }, [user]);
 
   const context = useMemo(() => user ? { user, logout } : null, [user, logout]);
 
