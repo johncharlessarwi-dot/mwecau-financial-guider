@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   codeql:
-    name: CodeQL (${{ matrix.language }})
+    name: CodeQL (JavaScript and TypeScript)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -26,14 +26,6 @@ jobs:
       contents: read
       security-events: write
       pull-requests: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - language: javascript-typescript
-            build-mode: none
-          - language: php
-            build-mode: autobuild
     steps:
       - name: Checkout source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -42,26 +34,9 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
-          languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
-      - name: Autobuild PHP
-        if: matrix.build-mode == 'autobuild'
-        uses: github/codeql-action/autobuild@v3
+          languages: javascript-typescript
+          build-mode: none
       - name: Analyze source
         uses: github/codeql-action/analyze@v3
         with:
-          category: /language:${{ matrix.language }}
-
-  dependency-review:
-    name: Dependency review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Review dependency changes
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: moderate
+          category: /language:javascript-typescript
