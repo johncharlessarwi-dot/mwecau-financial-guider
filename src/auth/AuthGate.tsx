@@ -3,7 +3,7 @@ import { LockKeyhole, Mail, ShieldCheck, UserRound, Wallet } from "lucide-react"
 import { clearUserOfflineData } from "../lib/offlineStore";
 
 export type AuthUser = { id: number; name: string; email: string };
-type AuthContextValue = { user: AuthUser; logout: () => Promise<void> };
+type AuthContextValue = { user: AuthUser; logout: () => Promise<void>; expireSession: () => Promise<void> };
 const AuthContext = createContext<AuthContextValue | null>(null);
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
 const API_BASE = `${API_ORIGIN}/api/v1`;
@@ -115,7 +115,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     setUser(null);
   }, [user]);
 
-  const context = useMemo(() => user ? { user, logout } : null, [user, logout]);
+  const expireSession = useCallback(async () => {\n    if (!user) return;\n    await clearUserOfflineData(user.id);\n    setUser(null);\n  }, [user]);\n\n  const context = useMemo(() => user ? { user, logout, expireSession } : null, [user, logout, expireSession]);
 
   if (checking) return <main className="auth-loading"><div className="auth-logo"><Wallet size={23}/></div><p>Checking your secure session…</p></main>;
   if (!user) return <AuthScreen onAuthenticated={setUser}/>;
