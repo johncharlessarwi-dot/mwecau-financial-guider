@@ -113,4 +113,18 @@ class BudgetManagementTest extends TestCase
             'end_date' => '2026-10-31',
         ])->assertUnprocessable()->assertJsonValidationErrors('currency');
     }
+
+    public function test_budget_rejects_amounts_with_more_than_two_decimal_places(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/budgets', [
+            'name' => 'Precise budget',
+            'amount' => '1000.123',
+            'currency' => 'TZS',
+            'period' => 'monthly',
+            'start_date' => '2026-10-01',
+            'end_date' => '2026-10-31',
+        ])->assertUnprocessable()->assertJsonValidationErrors('amount');
+    }
 }
