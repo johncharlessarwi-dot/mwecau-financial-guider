@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -106,10 +107,29 @@ class AuthenticationTest extends TestCase
           ->assertJsonPath('token_type', 'Bearer')
           ->assertJsonStructure(['user' => ['id', 'name', 'email'], 'token', 'expires_at']);
 
+        $storedToken = PersonalAccessToken::findToken($response->json('token'));
+        $this->assertNotNull($storedToken);
+        $this->assertSame(['read', 'write'], $storedToken->abilities);
+
         $this->withToken($response->json('token'))
             ->getJson('/api/v1/auth/me')
             ->assertOk()
             ->assertJsonPath('user.email', 'mobile@example.com');
+    }
+
+
+    public function test_read_only_mobile_token_cannot_mutate_financial_resources(): void
+    {
+        $user = User::factory()->create();
+        $readToken = $user->createToken('read-only-device', ['read'])->plainTextToken;
+
+        $this->withToken($readToken)
+            ->getJson('/api/v1/accounts')
+            ->assertOk();
+
+        $this->withToken($readToken)
+            ->postJson('/api/v1/accounts', [])
+            ->assertForbidden();
     }
 
     public function test_authenticated_endpoint_rejects_guest_requests(): void
