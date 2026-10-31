@@ -66,6 +66,34 @@ describe("offline storage-to-sync integration", () => {
     await expect(listPendingOfflineTransactions(882)).resolves.toHaveLength(2);
   });
 
+
+  it("retries an ambiguous committed write with the exact same idempotency key", async () => {
+    const payload = {
+      amount: "7600.00",
+      description: "Transfer whose response was lost"
+    };
+    const idempotencyKey = "offline-integration-key-0006";
+    await enqueueOfflineTransaction(884, idempotencyKey, payload);
+
+    const sender = vi.fn()
+      .mockRejectedValueOnce(new Error("Response lost after server commit."))
+      .mockResolvedValueOnce({ status: 201, replayed: true });
+
+    const firstAttempt = await syncPendingOfflineTransactions(884, sender);
+    expect(firstAttempt).toEqual({
+      synced: 0,
+      remaining: 1,
+      blockedBy: "Response lost after server commit."
+    });
+    await expect(listPendingOfflineTransactions(884)).resolves.toHaveLength(1);
+
+    const retry = await syncPendingOfflineTransactions(884, sender);
+    expect(retry).toEqual({ synced: 1, remaining: 0, blockedBy: null });
+    expect(sender).toHaveBeenNthCalledWith(1, payload, idempotencyKey);
+    expect(sender).toHaveBeenNthCalledWith(2, payload, idempotencyKey);
+    await expect(listPendingOfflineTransactions(884)).resolves.toEqual([]);
+  });
+
   it("keeps the queue intact when authentication expires during synchronization", async () => {
     await enqueueOfflineTransaction(883, "offline-integration-key-0005", {
       amount: "500.00",
