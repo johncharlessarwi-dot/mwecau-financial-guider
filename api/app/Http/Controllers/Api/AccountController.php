@@ -14,7 +14,7 @@ class AccountController extends Controller
             'data' => $request->user()->accounts()
                 ->where('is_active', true)
                 ->select('accounts.*')
-                ->selectRaw("(opening_balance + COALESCE((SELECT SUM(CASE WHEN transactions.type = 'income' THEN transactions.amount ELSE -transactions.amount END) FROM transactions WHERE transactions.account_id = accounts.id AND transactions.status = 'confirmed'), 0)) AS current_balance")
+                ->selectRaw("(opening_balance + COALESCE((SELECT SUM(CASE WHEN transactions.type = 'income' THEN transactions.amount ELSE -transactions.amount END) FROM transactions WHERE transactions.account_id = accounts.id AND transactions.status = 'confirmed' AND transactions.currency = accounts.currency AND transactions.user_id = accounts.user_id), 0)) AS current_balance")
                 ->latest()
                 ->get(),
         ]);
