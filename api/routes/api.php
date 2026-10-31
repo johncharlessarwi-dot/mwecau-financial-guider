@@ -26,7 +26,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/accounts', [AccountController::class, 'index']);
-        Route::post('/accounts', [AccountController::class, 'store']);
+        Route::post('/accounts', [AccountController::class, 'store'])->middleware('throttle:20,1');
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::post('/categories', [CategoryController::class, 'store'])->middleware('throttle:30,1');
         Route::patch('/categories/{category}', [CategoryController::class, 'update'])->middleware('throttle:30,1');
@@ -36,10 +36,10 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/budgets', [BudgetController::class, 'store'])->middleware('throttle:30,1');
         Route::patch('/budgets/{budget}', [BudgetController::class, 'update'])->middleware('throttle:30,1');
         Route::delete('/budgets/{budget}', [BudgetController::class, 'destroy'])->middleware('throttle:30,1');
-        Route::post('/transfers', [TransferController::class, 'store']);
+        Route::post('/transfers', [TransferController::class, 'store'])->middleware('throttle:20,1');
         Route::get('/transactions', [TransactionController::class, 'index']);
-        Route::post('/transactions', [TransactionController::class, 'store']);
-        Route::patch('/transactions/{transaction}', [TransactionController::class, 'update']);
-        Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy']);
+        Route::post('/transactions', [TransactionController::class, 'store'])->middleware('throttle:30,1');
+        Route::patch('/transactions/{transaction}', [TransactionController::class, 'update'])->middleware('throttle:30,1');
+        Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('throttle:30,1');
     });
 });
