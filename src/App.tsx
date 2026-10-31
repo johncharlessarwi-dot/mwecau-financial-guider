@@ -284,7 +284,7 @@ function DashboardApp() {
             {categoryFormOpen && <form className="inline-management-form category-form" onSubmit={saveCategory}>
               <label>Category name<input required minLength={2} maxLength={60} value={categoryForm.name} onChange={e=>setCategoryForm({...categoryForm,name:e.target.value})} placeholder="e.g. Mobile data"/></label><label>Category type<select value={categoryForm.type} onChange={e=>setCategoryForm({...categoryForm,type:e.target.value as "income"|"expense"})}><option value="expense">Expense</option><option value="income">Income</option></select></label>
               {formError&&<p className="inline-error" role="alert">{formError}</p>}<div className="inline-form-actions"><button type="button" className="secondary-btn" onClick={()=>setCategoryFormOpen(false)}>Cancel</button><button type="submit" className="primary-btn" disabled={saving}>{saving?"Saving…":"Save category"}</button></div>
-            </form>
+            </form>}
             <div className="category-columns">{(["income","expense"] as const).map(type=><div className="category-group" key={type}><h3>{type==="income"?"Income categories":"Expense categories"} <span>{categories.filter(c=>c.type===type&&c.active).length}</span></h3>{categories.filter(c=>c.type===type).map(c=><div className={`category-row ${c.active?"":"category-disabled"}`} key={c.id}><div><b>{c.name}</b><small>{c.system?"System category":"Custom category"} · {c.active?"Active":"Inactive"}</small></div>{!c.system&&<button className="text-btn" onClick={()=>void toggleCategory(c)} disabled={saving}>{c.active?"Deactivate":"Activate"}</button>}</div>)}</div>)}</div>
           </section>}
 
