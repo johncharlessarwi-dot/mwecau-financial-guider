@@ -186,6 +186,51 @@ class FinancialAuditLogTest extends TestCase
         }
     }
 
+
+    public function test_transfer_rolls_back_both_ledger_entries_when_audit_logging_fails(): void
+    {
+        $user = User::factory()->create();
+        $source = Account::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Atomic source',
+            'type' => 'cash',
+            'currency' => 'TZS',
+            'opening_balance' => '100000',
+            'is_active' => true,
+        ]);
+        $destination = Account::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Atomic destination',
+            'type' => 'bank',
+            'currency' => 'TZS',
+            'opening_balance' => '0',
+            'is_active' => true,
+        ]);
+        $auditCount = AuditLog::query()->where('user_id', $user->id)->count();
+        $token = $user->createToken('audit-failure-transfer-test')->plainTextToken;
+
+        $this->withoutExceptionHandling();
+        AuditLog::creating(static function (): void {
+            throw new \RuntimeException('Audit log persistence failed.');
+        });
+
+        try {
+            $this->withToken($token)->postJson('/api/v1/transfers', [
+                'from_account_id' => $source->id,
+                'to_account_id' => $destination->id,
+                'amount' => '25000.00',
+                'description' => 'Transfer must roll back',
+                'occurred_at' => now()->toDateTimeString(),
+            ]);
+            $this->fail('Expected audit log persistence failure.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Audit log persistence failed.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseCount('transactions', 0);
+        $this->assertSame($auditCount, AuditLog::query()->where('user_id', $user->id)->count());
+    }
+
     public function test_transfer_writes_audit_entries_for_both_ledger_sides(): void
     {
         $user = User::factory()->create();
