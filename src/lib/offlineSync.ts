@@ -28,7 +28,10 @@ export async function syncPendingOfflineTransactions(
       await removeOfflineTransaction(userId, item.id);
       synced += 1;
     } catch (error) {
-      if (error && typeof error === "object" && "status" in error && ((error as {status: number | null}).status === 401 || (error as {status: number | null}).status === 403)) {\n        throw error;\n      }\n      blockedBy = error instanceof Error ? error.message : "A pending transaction could not be synchronized.";
+      if (error && typeof error === "object" && "status" in error && ((error as {status: number | null}).status === 401 || (error as {status: number | null}).status === 403)) {
+        throw error;
+      }
+      blockedBy = error instanceof Error ? error.message : "A pending transaction could not be synchronized.";
       // Preserve this item and all later items. Retrying the same idempotency
       // key is safe if the server committed but the response was lost.
       break;
