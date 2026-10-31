@@ -60,13 +60,92 @@ class TransactionController extends Controller
             throw ValidationException::withMessages(['currency' => 'Transaction currency must match the selected account currency.']);
         }
 
-        $transaction = $request->user()->transactions()->create($data + [
-            'currency' => $account->currency,
-            'category' => $data['category'] ?? 'Other',
-            'status' => 'confirmed',
-        ]);
+        $idempotencyKey = $request->header('Idempotency-Key');
 
-        return response()->json(['data' => $transaction->load('account:id,name,type,currency')], 201);
+        if ($idempotencyKey === null) {
+            $transaction = $request->user()->transactions()->create($data + [
+                'currency' => $account->currency,
+                'category' => $data['category'] ?? 'Other',
+                'status' => 'confirmed',
+            ]);
+
+            return response()->json(['data' => $transaction->load('account:id,name,type,currency')], 201);
+        }
+
+        if (strlen($idempotencyKey) < 16 || strlen($idempotencyKey) > 128) {
+            return response()->json(['message' => 'Idempotency-Key must contain between 16 and 128 characters.'], 422);
+        }
+
+        $user = $request->user();
+        $requestHash = hash('sha256', json_encode($data, JSON_THROW_ON_ERROR));
+
+        try {
+            return DB::transaction(function () use ($user, $account, $data, $idempotencyKey, $requestHash): JsonResponse {
+                $existing = DB::table('idempotency_records')
+                    ->where('user_id', $user->id)
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existing) {
+                    return $this->resolveIdempotencyReplay($existing, $requestHash);
+                }
+
+                $recordId = DB::table('idempotency_records')->insertGetId([
+                    'user_id' => $user->id,
+                    'idempotency_key' => $idempotencyKey,
+                    'request_hash' => $requestHash,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $transaction = $user->transactions()->create($data + [
+                    'currency' => $account->currency,
+                    'category' => $data['category'] ?? 'Other',
+                    'status' => 'confirmed',
+                ]);
+
+                $body = ['data' => $transaction->load('account:id,name,type,currency')->toArray()];
+
+                DB::table('idempotency_records')->where('id', $recordId)->update([
+                    'response_status' => 201,
+                    'response_body' => json_encode($body, JSON_THROW_ON_ERROR),
+                    'updated_at' => now(),
+                ]);
+
+                return response()->json($body, 201);
+            });
+        } catch (QueryException $exception) {
+            $existing = DB::table('idempotency_records')
+                ->where('user_id', $user->id)
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+
+            if (! $existing) {
+                throw $exception;
+            }
+
+            return $this->resolveIdempotencyReplay($existing, $requestHash);
+        }
+    }
+
+    private function resolveIdempotencyReplay(object $record, string $requestHash): JsonResponse
+    {
+        if (! hash_equals($record->request_hash, $requestHash)) {
+            return response()->json([
+                'message' => 'This Idempotency-Key was already used with a different transaction payload.',
+            ], 409);
+        }
+
+        if ($record->response_status === null || $record->response_body === null) {
+            return response()->json(['message' => 'The original request is still being processed. Retry shortly.'], 409);
+        }
+
+        $body = is_array($record->response_body)
+            ? $record->response_body
+            : json_decode($record->response_body, true, flags: JSON_THROW_ON_ERROR);
+
+        return response()->json($body, (int) $record->response_status);
     }
 
     public function update(Request $request, Transaction $transaction): JsonResponse
