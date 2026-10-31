@@ -58,16 +58,16 @@ class BudgetController extends Controller
 
     private function validatedData(Request $request, bool $partial = false, ?Budget $existing = null): array
     {
-        $required = $partial ? 'sometimes|required' : 'required';
+        $required = $partial ? ['sometimes', 'required'] : ['required'];
 
         $data = $request->validate([
             'category_id' => ['sometimes', 'nullable', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('type', 'expense')->where('is_active', true)->where(fn ($scope) => $scope->whereNull('user_id')->where('is_system', true)->orWhere('user_id', $request->user()->id)))],
-            'name' => [$required, 'string', 'min:2', 'max:80'],
-            'amount' => [$required, 'numeric', 'decimal:0,2', 'gt:0', 'max:9999999999999999.99'],
-            'currency' => [$required, Rule::in(['TZS', 'USD'])],
-            'period' => [$required, 'in:weekly,monthly,yearly,custom'],
-            'start_date' => [$required, 'date'],
-            'end_date' => [$required, 'date'],
+            'name' => [...$required, 'string', 'min:2', 'max:80'],
+            'amount' => [...$required, 'numeric', 'decimal:0,2', 'gt:0', 'max:9999999999999999.99'],
+            'currency' => [...$required, Rule::in(['TZS', 'USD'])],
+            'period' => [...$required, 'in:weekly,monthly,yearly,custom'],
+            'start_date' => [...$required, 'date'],
+            'end_date' => [...$required, 'date'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
