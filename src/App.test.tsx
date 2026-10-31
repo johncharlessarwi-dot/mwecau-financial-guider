@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
-const offlineStoreMocks = vi.hoisted(() => ({ clearUserOfflineData: vi.fn(), saveOfflineSnapshot: vi.fn(), readOfflineSnapshot: vi.fn(), enqueueOfflineTransaction: vi.fn() }));
+const offlineStoreMocks = vi.hoisted(() => ({ clearUserOfflineData: vi.fn(), saveOfflineSnapshot: vi.fn(), readOfflineSnapshot: vi.fn(), enqueueOfflineTransaction: vi.fn(), listPendingOfflineTransactions: vi.fn() }));
 vi.mock("./lib/offlineStore", () => offlineStoreMocks);
 
 const signedInUser = { id: 7, name: "Test User", email: "test@example.com" };
@@ -85,7 +85,7 @@ async function renderAuthenticatedApp() {
 }
 
 describe("MWECau GUIDER live finance workspace", () => {
-  beforeEach(() => { vi.unstubAllGlobals(); offlineStoreMocks.clearUserOfflineData.mockReset().mockResolvedValue(undefined); offlineStoreMocks.saveOfflineSnapshot.mockReset().mockResolvedValue(undefined); offlineStoreMocks.readOfflineSnapshot.mockReset().mockResolvedValue(null); offlineStoreMocks.enqueueOfflineTransaction.mockReset().mockResolvedValue(undefined); });
+  beforeEach(() => { vi.unstubAllGlobals(); offlineStoreMocks.clearUserOfflineData.mockReset().mockResolvedValue(undefined); offlineStoreMocks.saveOfflineSnapshot.mockReset().mockResolvedValue(undefined); offlineStoreMocks.readOfflineSnapshot.mockReset().mockResolvedValue(null); offlineStoreMocks.enqueueOfflineTransaction.mockReset().mockResolvedValue(undefined); offlineStoreMocks.listPendingOfflineTransactions.mockReset().mockResolvedValue([]); });
 
   it("requires authentication before rendering the finance workspace", async () => {
     mockAuthenticationApi();
@@ -190,6 +190,7 @@ describe("MWECau GUIDER live finance workspace", () => {
 
   it("queues a transaction securely when the finance API cannot be reached", async () => {
     await renderAuthenticatedApp();
+    offlineStoreMocks.listPendingOfflineTransactions.mockResolvedValue([{id:"7:key",idempotencyKey:"key",payload:{},createdAt:Date.now()}]);
     const fetchMock = vi.mocked(fetch);
     const originalFetch = fetchMock.getMockImplementation();
     if (!originalFetch) throw new Error("Expected the authenticated API mock to be installed.");
