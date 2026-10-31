@@ -49,6 +49,25 @@ fi
   sha256sum --check "$(basename "$backup_file").sha256"
 )
 
+
+expected_hash=""
+read -r expected_hash _ < "$backup_file.sha256"
+tampered_file="$BACKUP_DIR/tampered.sql.gz.age"
+cp "$backup_file" "$tampered_file"
+printf 'tampered' >> "$tampered_file"
+printf '%s  %s\\n' "$expected_hash" "$(basename "$tampered_file")" > "$tampered_file.sha256"
+export BACKUP_FILE="$tampered_file"
+export RESTORE_CAPTURE_FILE="$temporary_root/tampered.sql"
+
+if bash "$root/scripts/restore-mysql.sh" >/dev/null 2>&1; then
+  echo "Restore unexpectedly accepted a tampered backup." >&2
+  exit 1
+fi
+[[ ! -s "$RESTORE_CAPTURE_FILE" ]] || {
+  echo "Tampered backup reached the MySQL restore client." >&2
+  exit 1
+}
+
 export BACKUP_FILE="$backup_file"
 export AGE_IDENTITY_FILE="$temporary_root/identity"
 export RESTORE_CAPTURE_FILE="$temporary_root/restored.sql"
