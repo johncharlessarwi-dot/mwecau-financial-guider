@@ -79,10 +79,67 @@ jobs:
           CACHE_STORE: array
         run: php artisan test --display-warnings
 
+
+  verify-api-mysql:
+    name: Validate Laravel API on MySQL 8.4
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: mwecau_guider_test
+          MYSQL_USER: laravel
+          MYSQL_PASSWORD: test-password
+          MYSQL_ROOT_PASSWORD: root-test-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u laravel --password=test-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql
+          coverage: none
+      - name: Validate Composer manifest
+        run: composer validate --no-check-publish
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+      - name: Audit PHP dependencies
+        run: composer audit
+      - name: Prepare test environment
+        run: touch .env
+      - name: Run API feature tests against MySQL
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: mwecau_guider_test
+          DB_USERNAME: laravel
+          DB_PASSWORD: test-password
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+        run: php artisan test --display-warnings
+
   notify-email:
     name: Email CI result
     runs-on: ubuntu-latest
-    needs: [verify-web, verify-api]
+    needs: [verify-web, verify-api, verify-api-mysql]
     if: always()
     timeout-minutes: 5
     steps:
@@ -94,6 +151,7 @@ jobs:
           SMTP_PORT: '465'
           WEB_RESULT: ${{ needs.verify-web.result }}
           API_RESULT: ${{ needs.verify-api.result }}
+          MYSQL_RESULT: ${{ needs.verify-api-mysql.result }}
           REPOSITORY: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
           COMMIT_SHA: ${{ github.sha }}
@@ -111,7 +169,8 @@ jobs:
 
           web = os.environ["WEB_RESULT"]
           api = os.environ["API_RESULT"]
-          passed = web == "success" and api == "success"
+          mysql = os.environ["MYSQL_RESULT"]
+          passed = web == "success" and api == "success" and mysql == "success"
           status = "SUCCESS" if passed else "FAILED"
           msg = EmailMessage()
           msg["Subject"] = f"[MWECau GUIDER CI] {status} - {os.environ['BRANCH']}"
