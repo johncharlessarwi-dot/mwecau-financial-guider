@@ -37,7 +37,7 @@ The web client uses Laravel Sanctum's stateful, cookie-based SPA authentication.
 
 The browser first obtains the Sanctum CSRF cookie, then sends credentialed requests. The API regenerates the session identifier after registration and login, exposes only a safe user profile, and invalidates the session on logout. Login and registration remain rate-limited.
 
-For production, serve the frontend and API over HTTPS, set `SESSION_SECURE_COOKIE=true`, use a same-site deployment topology where possible, and configure the cookie domain and Sanctum stateful domains for the actual hostnames. Do not use wildcard CORS origins with credentials. The finance dashboard still uses clearly labelled demo ledger data at this phase; authentication is connected, but transactions, budgets and categories have not yet been wired to persistent API records.
+For production, serve the frontend and API over HTTPS, set `SESSION_SECURE_COOKIE=true`, use a same-site deployment topology where possible, and configure the cookie domain and Sanctum stateful domains for the actual hostnames. Do not use wildcard CORS origins with credentials. The authenticated web workspace now reads and writes accounts, transactions, categories, and budgets through the versioned Laravel API. Account balances are calculated from confirmed ledger entries in the account currency. The transaction list currently loads the latest 100 records; full pagination and complete reporting aggregates remain planned. The dashboard does not seed or display fabricated demo financial records. The AI Accountant and advanced reports remain clearly marked as not yet connected.
 
 ## Important financial-data principles
 
