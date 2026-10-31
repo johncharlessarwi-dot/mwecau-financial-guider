@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
-const offlineStoreMocks = vi.hoisted(() => ({ clearUserOfflineData: vi.fn(), saveOfflineSnapshot: vi.fn(), readOfflineSnapshot: vi.fn() }));
+const offlineStoreMocks = vi.hoisted(() => ({ clearUserOfflineData: vi.fn(), saveOfflineSnapshot: vi.fn(), readOfflineSnapshot: vi.fn(), enqueueOfflineTransaction: vi.fn() }));
 vi.mock("./lib/offlineStore", () => offlineStoreMocks);
 
 const signedInUser = { id: 7, name: "Test User", email: "test@example.com" };
@@ -85,7 +85,7 @@ async function renderAuthenticatedApp() {
 }
 
 describe("MWECau GUIDER live finance workspace", () => {
-  beforeEach(() => { vi.unstubAllGlobals(); offlineStoreMocks.clearUserOfflineData.mockReset().mockResolvedValue(undefined); offlineStoreMocks.saveOfflineSnapshot.mockReset().mockResolvedValue(undefined); offlineStoreMocks.readOfflineSnapshot.mockReset().mockResolvedValue(null); });
+  beforeEach(() => { vi.unstubAllGlobals(); offlineStoreMocks.clearUserOfflineData.mockReset().mockResolvedValue(undefined); offlineStoreMocks.saveOfflineSnapshot.mockReset().mockResolvedValue(undefined); offlineStoreMocks.readOfflineSnapshot.mockReset().mockResolvedValue(null); offlineStoreMocks.enqueueOfflineTransaction.mockReset().mockResolvedValue(undefined); });
 
   it("requires authentication before rendering the finance workspace", async () => {
     mockAuthenticationApi();
@@ -186,6 +186,31 @@ describe("MWECau GUIDER live finance workspace", () => {
     expect(firstHeaders.get("Idempotency-Key")).toBeTruthy();
     expect(secondHeaders.get("Idempotency-Key")).toBe(firstHeaders.get("Idempotency-Key"));
     expect(attempts[1][1]?.body).toBe(attempts[0][1]?.body);
+  });
+
+  it("queues a transaction securely when the finance API cannot be reached", async () => {
+    await renderAuthenticatedApp();
+    const fetchMock = vi.mocked(fetch);
+    const originalFetch = fetchMock.getMockImplementation();
+    if (!originalFetch) throw new Error("Expected the authenticated API mock to be installed.");
+    fetchMock.mockImplementation(async (input, init) => {
+      if (String(input).includes("/api/v1/transactions") && (init?.method || "GET").toUpperCase() === "POST") {
+        throw new TypeError("Failed to fetch");
+      }
+      return originalFetch(input, init);
+    });
+
+    fireEvent.click(screen.getAllByRole("button", {name:/Add transaction/i})[0]);
+    fireEvent.change(screen.getByLabelText("Description"),{target:{value:"Offline queued payment"}});
+    fireEvent.change(screen.getByLabelText(/Amount \(TZS\)/),{target:{value:"3200"}});
+    fireEvent.click(screen.getByRole("button",{name:/Save entry/i}));
+
+    await waitFor(() => expect(screen.getByText(/Transaction saved in encrypted offline storage/i)).toBeInTheDocument());
+    expect(offlineStoreMocks.enqueueOfflineTransaction).toHaveBeenCalledOnce();
+    const [userId, key, payload] = offlineStoreMocks.enqueueOfflineTransaction.mock.calls[0];
+    expect(userId).toBe(signedInUser.id);
+    expect(key).toMatch(/^[0-9a-f]{32}$/);
+    expect(payload).toEqual(expect.objectContaining({description:"Offline queued payment",amount:"3200.00"}));
   });
 
   it("creates a server-backed account", async () => {
