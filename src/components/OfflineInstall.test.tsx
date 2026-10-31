@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import OfflineInstall from "./OfflineInstall";
 
@@ -16,11 +16,11 @@ describe("PWA connectivity and installation controls", () => {
     render(<OfflineInstall />);
     expect(screen.getByRole("status")).toHaveTextContent("Online");
 
-    window.dispatchEvent(new Event("offline"));
+    act(() => window.dispatchEvent(new Event("offline")));
     expect(screen.getByRole("status")).toHaveTextContent("Offline");
     expect(screen.getByText(/Live financial data and saving changes need an internet connection/i)).toBeInTheDocument();
 
-    window.dispatchEvent(new Event("online"));
+    act(() => window.dispatchEvent(new Event("online")));
     expect(screen.getByRole("status")).toHaveTextContent("Online");
   });
 
@@ -29,7 +29,7 @@ describe("PWA connectivity and installation controls", () => {
     expect(screen.queryByRole("button", { name: /Install app/i })).not.toBeInTheDocument();
 
     const { event } = installEvent();
-    window.dispatchEvent(event);
+    act(() => window.dispatchEvent(event));
     expect(event.defaultPrevented).toBe(true);
     expect(screen.getByRole("button", { name: /Install app/i })).toBeInTheDocument();
   });
