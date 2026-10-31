@@ -7,9 +7,17 @@ type EncryptedRecord = {
 };
 
 type StoredKey = { userId: string; key: CryptoKey };
+type EncryptedOutboxRecord = EncryptedRecord & { idempotencyKey: string; createdAt: number };
+
+export type PendingOfflineTransaction = {
+  id: string;
+  idempotencyKey: string;
+  payload: Record<string, unknown>;
+  createdAt: number;
+};
 
 const DATABASE_NAME = "mwecau-guider-private-offline";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -22,6 +30,10 @@ function openDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains("snapshots")) {
         const snapshots = database.createObjectStore("snapshots", { keyPath: "id" });
         snapshots.createIndex("userId", "userId", { unique: false });
+      }
+      if (!database.objectStoreNames.contains("outbox")) {
+        const outbox = database.createObjectStore("outbox", { keyPath: "id" });
+        outbox.createIndex("userId", "userId", { unique: false });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -160,18 +172,111 @@ export async function clearUserOfflineData(userId: string | number): Promise<voi
   const accountId = normalizeUserId(userId);
   const database = await openDatabase();
   try {
-    const transaction = database.transaction(["keys", "snapshots"], "readwrite");
+    const transaction = database.transaction(["keys", "snapshots", "outbox"], "readwrite");
     const completed = transactionDone(transaction);
     transaction.objectStore("keys").delete(accountId);
 
-    const snapshots = transaction.objectStore("snapshots");
-    const cursorRequest = snapshots.index("userId").openKeyCursor(IDBKeyRange.only(accountId));
-    cursorRequest.onsuccess = () => {
-      const cursor = cursorRequest.result;
-      if (cursor) {
-        snapshots.delete(cursor.primaryKey);
-        cursor.continue();
+    for (const storeName of ["snapshots", "outbox"]) {
+      const store = transaction.objectStore(storeName);
+      const cursorRequest = store.index("userId").openKeyCursor(IDBKeyRange.only(accountId));
+      cursorRequest.onsuccess = () => {
+        const cursor = cursorRequest.result;
+        if (cursor) {
+          store.delete(cursor.primaryKey);
+          cursor.continue();
+        }
+      };
+    }
+    await completed;
+  } finally {
+    database.close();
+  }
+}
+
+export async function enqueueOfflineTransaction(
+  userId: string | number,
+  idempotencyKey: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const accountId = normalizeUserId(userId);
+  if (idempotencyKey.length < 16 || idempotencyKey.length > 128) {
+    throw new Error("A valid idempotency key is required for the offline transaction queue.");
+  }
+
+  const database = await openDatabase();
+  try {
+    const id = accountId + ":" + idempotencyKey;
+    const outbox = database.transaction("outbox", "readonly").objectStore("outbox");
+    const existing = await requestValue<EncryptedOutboxRecord | undefined>(outbox.get(id));
+    if (existing) {
+      const key = await getOrCreateUserKey(database, accountId);
+      const previous = await decryptValue<Record<string, unknown>>(key, existing);
+      if (JSON.stringify(previous) !== JSON.stringify(payload)) {
+        throw new Error("This offline transaction key is already assigned to a different payload.");
       }
+      return;
+    }
+
+    const key = await getOrCreateUserKey(database, accountId);
+    const encrypted = await encryptValue(key, payload);
+    const record: EncryptedOutboxRecord = {
+      id,
+      userId: accountId,
+      idempotencyKey,
+      ...encrypted,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    const transaction = database.transaction("outbox", "readwrite");
+    const completed = transactionDone(transaction);
+    transaction.objectStore("outbox").add(record);
+    await completed;
+  } finally {
+    database.close();
+  }
+}
+
+export async function listPendingOfflineTransactions(
+  userId: string | number
+): Promise<PendingOfflineTransaction[]> {
+  const accountId = normalizeUserId(userId);
+  const database = await openDatabase();
+  try {
+    const records = await requestValue<EncryptedOutboxRecord[]>(
+      database.transaction("outbox", "readonly")
+        .objectStore("outbox")
+        .index("userId")
+        .getAll(IDBKeyRange.only(accountId))
+    );
+    if (records.length === 0) return [];
+
+    const storedKey = await requestValue<StoredKey | undefined>(
+      database.transaction("keys", "readonly").objectStore("keys").get(accountId)
+    );
+    if (!storedKey) return [];
+
+    return await Promise.all(records.map(async (record) => ({
+      id: record.id,
+      idempotencyKey: record.idempotencyKey,
+      payload: await decryptValue<Record<string, unknown>>(storedKey.key, record),
+      createdAt: record.createdAt
+    })));
+  } finally {
+    database.close();
+  }
+}
+
+export async function removeOfflineTransaction(userId: string | number, id: string): Promise<void> {
+  const accountId = normalizeUserId(userId);
+  const database = await openDatabase();
+  try {
+    const transaction = database.transaction("outbox", "readwrite");
+    const completed = transactionDone(transaction);
+    const store = transaction.objectStore("outbox");
+    const request = store.get(id);
+    request.onsuccess = () => {
+      const record = request.result as EncryptedOutboxRecord | undefined;
+      if (record?.userId === accountId) store.delete(id);
     };
     await completed;
   } finally {
