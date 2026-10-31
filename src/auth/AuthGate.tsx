@@ -117,8 +117,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   const expireSession = useCallback(async () => {
     if (!user) return;
-    await clearUserOfflineData(user.id);
-    setUser(null);
+    try {
+      await clearUserOfflineData(user.id);
+    } finally {
+      setUser(null);
+    }
   }, [user]);
 
   const context = useMemo(() => user ? { user, logout, expireSession } : null, [user, logout, expireSession]);
