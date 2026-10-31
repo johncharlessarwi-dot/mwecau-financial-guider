@@ -27,7 +27,7 @@ const money = (value: number, currency = "TZS") => new Intl.NumberFormat("en-TZ"
 
 function DashboardApp() {
   const { user, logout } = useAuth();
-  const pendingTransaction = useRef<{ fingerprint: string; key: string } | null>(null);
+  const pendingTransaction = useRef<{ fingerprint: string; key: string; body: string } | null>(null);
   const [tab, setTab] = useState<Tab>("Overview");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -136,11 +136,18 @@ function DashboardApp() {
         account_id:Number(form.accountId),type:form.kind,amount:amount.toFixed(2),currency:accounts.find(a=>a.id===Number(form.accountId))?.currency ?? "TZS",
         category:form.category,description:form.title.trim(),occurred_at:new Date().toISOString()
       };
-      const fingerprint = JSON.stringify(payload);
+      const fingerprint = JSON.stringify({
+        account_id: payload.account_id,
+        type: payload.type,
+        amount: payload.amount,
+        currency: payload.currency,
+        category: payload.category,
+        description: payload.description
+      });
       if (!pendingTransaction.current || pendingTransaction.current.fingerprint !== fingerprint) {
-        pendingTransaction.current = { fingerprint, key: createIdempotencyKey() };
+        pendingTransaction.current = { fingerprint, key: createIdempotencyKey(), body: JSON.stringify(payload) };
       }
-      await apiRequest("/transactions",{method:"POST",headers:{"Idempotency-Key":pendingTransaction.current.key},body:JSON.stringify(payload)});
+      await apiRequest("/transactions",{method:"POST",headers:{"Idempotency-Key":pendingTransaction.current.key},body:pendingTransaction.current.body});
       pendingTransaction.current = null;
       setForm({title:"",amount:"",kind:"expense",category:categories.find(x=>x.type==="expense"&&x.active)?.name??"",accountId:form.accountId});
       setShowForm(false); setTab("Transactions"); await refreshFinanceData();
