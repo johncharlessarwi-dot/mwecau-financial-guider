@@ -98,7 +98,7 @@ class AuthenticationTest extends TestCase
 
     public function test_password_is_never_returned_by_authentication_endpoints(): void
     {
-        $this->postJson('/api/v1/auth/register', [
+        $this->withHeader('Origin', 'http://localhost:5173')->postJson('/api/v1/auth/register', [
             'name' => 'Private User',
             'email' => 'private@example.com',
             'password' => 'a-secure-password',
