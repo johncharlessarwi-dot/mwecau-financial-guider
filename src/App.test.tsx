@@ -108,6 +108,40 @@ describe("MWECau GUIDER live finance workspace", () => {
     expect(vi.mocked(fetch).mock.calls.some(([url,init])=>String(url).includes("/api/v1/transactions")&&init?.method==="POST")).toBe(true);
   });
 
+  it("reuses the same idempotency key and exact payload after a failed transaction response", async () => {
+    await renderAuthenticatedApp();
+    const fetchMock = vi.mocked(fetch);
+    const originalFetch = fetchMock.getMockImplementation();
+    if (!originalFetch) throw new Error("Expected the authenticated API mock to be installed.");
+    let failFirstAttempt = true;
+    fetchMock.mockImplementation(async (input, init) => {
+      if (String(input).includes("/api/v1/transactions") && (init?.method || "GET").toUpperCase() === "POST" && failFirstAttempt) {
+        failFirstAttempt = false;
+        return new Response(JSON.stringify({message:"Temporary server error"}),{status:503,headers:{"Content-Type":"application/json"}});
+      }
+      return originalFetch(input, init);
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Add transaction/i })[0]);
+    fireEvent.change(screen.getByLabelText("Description"), {target:{value:"Retry-safe payment"}});
+    fireEvent.change(screen.getByLabelText(/Amount \\(TZS\\)/), {target:{value:"18000"}});
+    fireEvent.click(screen.getByRole("button", {name:/Save entry/i}));
+    await waitFor(() => expect(screen.getByText("Temporary server error")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", {name:/Save entry/i}));
+    await waitFor(() => expect(screen.getByText("Retry-safe payment")).toBeInTheDocument());
+
+    const attempts = fetchMock.mock.calls.filter(([url, init]) =>
+      String(url).includes("/api/v1/transactions") && (init?.method || "GET").toUpperCase() === "POST"
+    );
+    expect(attempts).toHaveLength(2);
+    const firstHeaders = new Headers(attempts[0][1]?.headers);
+    const secondHeaders = new Headers(attempts[1][1]?.headers);
+    expect(firstHeaders.get("Idempotency-Key")).toBeTruthy();
+    expect(secondHeaders.get("Idempotency-Key")).toBe(firstHeaders.get("Idempotency-Key"));
+    expect(attempts[1][1]?.body).toBe(attempts[0][1]?.body);
+  });
+
   it("creates a server-backed account", async () => {
     await renderAuthenticatedApp();
     fireEvent.click(screen.getByRole("button",{name:"Accounts"}));
