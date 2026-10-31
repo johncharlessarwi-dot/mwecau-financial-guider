@@ -30,9 +30,10 @@ describe("authenticated API error classification", () => {
   });
 
   it("keeps validation failures distinguishable from authorization failures", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ errors: { amount: ["The amount is invalid."] } }), { status: 422 })
-    ));
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ errors: { amount: ["The amount is invalid."] } }), { status: 422 }))
+    );
 
     await expect(apiRequest("/transactions", { method: "POST", body: JSON.stringify({ amount: -1 }) }))
       .rejects.toMatchObject({ status: 422, message: "The amount is invalid." });
