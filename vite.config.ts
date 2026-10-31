@@ -11,7 +11,7 @@ function offlinePrecachePlugin(): Plugin {
     apply: "build",
     generateBundle(_options, bundle) {
       precacheAssets = Object.keys(bundle)
-        .filter((file) => /\\.(?:js|css|woff2?|svg|png|webp|ico)$/.test(file))
+        .filter((file) => /\.(?:js|css|woff2?|svg|png|webp|ico)$/.test(file))
         .map((file) => `/${file}`);
       precacheAssets.push("/", "/index.html", "/manifest.webmanifest", "/icons/guider-icon.svg");
       precacheAssets = [...new Set(precacheAssets)].sort();
