@@ -55,7 +55,8 @@ function mockAuthenticationApi() {
       }
       return json({data:categories});
     }
-    if (url.includes("/api/v1/reports/summary")) return json({data:{from:"2026-10-01",to:"2026-10-31",currencies:[{currency:"TZS",income:"100000.00",expenses:"25000.00",net_cash_flow:"75000.00",categories:[{type:"income",category:"Salary",amount:"100000.00"},{type:"expense",category:"Food",amount:"25000.00"}]}]}});\n    if (url.includes("/api/v1/budgets")) {
+    if (url.includes("/api/v1/reports/summary")) return json({data:{from:"2026-10-01",to:"2026-10-31",currencies:[{currency:"TZS",income:"100000.00",expenses:"25000.00",net_cash_flow:"75000.00",categories:[{type:"income",category:"Salary",amount:"100000.00"},{type:"expense",category:"Food",amount:"25000.00"}]}]}});
+    if (url.includes("/api/v1/budgets")) {
       if(method==="POST"){
         const body=JSON.parse(String(init?.body));
         const category=categories.find(x=>x.id===body.category_id);
@@ -151,7 +152,17 @@ describe("MWECau GUIDER live finance workspace", () => {
     expect(screen.getByRole("option",{name:"Mobile data"})).toBeInTheDocument();
   });
 
-  it("loads date-filtered financial reports from the authenticated API", async () => {\n    await renderAuthenticatedApp();\n    fireEvent.click(screen.getByRole("button",{name:"Reports"}));\n    fireEvent.click(screen.getByRole("button",{name:"Generate report"}));\n    await waitFor(()=>expect(screen.getByText("TZS summary")).toBeInTheDocument());\n    expect(screen.getByText("Salary")).toBeInTheDocument();\n    expect(screen.getByText("Food")).toBeInTheDocument();\n    expect(vi.mocked(fetch).mock.calls.some(([url])=>String(url).includes("/api/v1/reports/summary?from="))).toBe(true);\n  });\n\n  it("uses credentialed requests and never persists a bearer token in browser storage", async () => {
+  it("loads date-filtered financial reports from the authenticated API", async () => {
+    await renderAuthenticatedApp();
+    fireEvent.click(screen.getByRole("button",{name:"Reports"}));
+    fireEvent.click(screen.getByRole("button",{name:"Generate report"}));
+    await waitFor(()=>expect(screen.getByText("TZS summary")).toBeInTheDocument());
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+    expect(screen.getByText("Food")).toBeInTheDocument();
+    expect(vi.mocked(fetch).mock.calls.some(([url])=>String(url).includes("/api/v1/reports/summary?from="))).toBe(true);
+  });
+
+  it("uses credentialed requests and never persists a bearer token in browser storage", async () => {
     await renderAuthenticatedApp();
     const calls=vi.mocked(fetch).mock.calls;
     const financeCall=calls.find(([url])=>String(url).includes("/api/v1/accounts"));
