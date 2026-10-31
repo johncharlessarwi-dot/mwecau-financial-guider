@@ -52,8 +52,15 @@ class TransactionController extends Controller
             'reference' => ['nullable', 'string', 'max:80'],
         ]);
 
+        $account = $request->user()->accounts()->whereKey($data['account_id'])->firstOrFail();
+        $currency = $data['currency'] ?? $account->currency;
+
+        if ($currency !== $account->currency) {
+            throw ValidationException::withMessages(['currency' => 'Transaction currency must match the selected account currency.']);
+        }
+
         $transaction = $request->user()->transactions()->create($data + [
-            'currency' => $data['currency'] ?? 'TZS',
+            'currency' => $account->currency,
             'category' => $data['category'] ?? 'Other',
             'status' => 'confirmed',
         ]);
@@ -76,6 +83,15 @@ class TransactionController extends Controller
             'reference' => ['sometimes', 'nullable', 'string', 'max:80'],
         ]);
 
+        $accountId = $data['account_id'] ?? $transaction->account_id;
+        $account = $request->user()->accounts()->whereKey($accountId)->firstOrFail();
+        $currency = $data['currency'] ?? $account->currency;
+
+        if ($currency !== $account->currency) {
+            throw ValidationException::withMessages(['currency' => 'Transaction currency must match the selected account currency.']);
+        }
+
+        $data['currency'] = $account->currency;
         $transaction->update($data);
 
         return response()->json(['data' => $transaction->fresh()->load('account:id,name,type,currency')]);
