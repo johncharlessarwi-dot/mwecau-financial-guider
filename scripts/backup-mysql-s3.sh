@@ -17,7 +17,18 @@ checksum_file="$backup_file.sha256"
 [[ -s "$checksum_file" ]] || { echo "Backup checksum file is missing." >&2; exit 1; }
 upload_file() {
   local file="$1" prefix="$2" destination="$BACKUP_S3_URI/$prefix/$(basename "$file")"
-  aws s3 cp "$file" "$destination" --sse AES256 --only-show-errors
+  local -a encryption_args
+  case "${BACKUP_S3_SSE:-aws:kms}" in
+    aws:kms)
+      encryption_args=(--sse aws:kms)
+      if [[ -n "${BACKUP_S3_KMS_KEY_ID:-}" ]]; then
+        encryption_args+=(--sse-kms-key-id "$BACKUP_S3_KMS_KEY_ID")
+      fi
+      ;;
+    AES256) encryption_args=(--sse AES256) ;;
+    *) echo "BACKUP_S3_SSE must be aws:kms or AES256." >&2; return 2 ;;
+  esac
+  aws s3 cp "$file" "$destination" "${encryption_args[@]}" --only-show-errors
   printf 'Uploaded and server-side encrypted: %s\n' "$destination"
   if [[ "$file" == *.age ]]; then
     local bucket key remote_size local_size
