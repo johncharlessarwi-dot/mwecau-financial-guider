@@ -91,6 +91,27 @@ class AuthenticationTest extends TestCase
           ->assertJsonPath('errors.email.0', 'The supplied credentials are invalid.');
     }
 
+    public function test_native_client_can_request_a_short_lived_scoped_bearer_token(): void
+    {
+        User::create([
+            'name' => 'Mobile User',
+            'email' => 'mobile@example.com',
+            'password' => 'a-secure-password',
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/token', [
+            'email' => 'MOBILE@example.com',
+            'password' => 'a-secure-password',
+        ])->assertOk()
+          ->assertJsonPath('token_type', 'Bearer')
+          ->assertJsonStructure(['user' => ['id', 'name', 'email'], 'token', 'expires_at']);
+
+        $this->withToken($response->json('token'))
+            ->getJson('/api/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('user.email', 'mobile@example.com');
+    }
+
     public function test_authenticated_endpoint_rejects_guest_requests(): void
     {
         $this->getJson('/api/v1/auth/me')->assertUnauthorized();
