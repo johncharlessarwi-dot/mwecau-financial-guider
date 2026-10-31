@@ -2,12 +2,12 @@
 set -Eeuo pipefail
 set +x
 umask 077
-SCRIPT_DIR="$(cd -- "$(dirname -- "\${BASH_SOURCE[0]}")" && pwd)"
-: "\${BACKUP_S3_URI:?Set BACKUP_S3_URI to a private s3://bucket/prefix destination}"
-: "\${BACKUP_DIR:?Set BACKUP_DIR to a protected local temporary directory}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+: "${BACKUP_S3_URI:?Set BACKUP_S3_URI to a private s3://bucket/prefix destination}"
+: "${BACKUP_DIR:?Set BACKUP_DIR to a protected local temporary directory}"
 command -v aws >/dev/null || { echo "AWS CLI v2 is required for S3-compatible upload." >&2; exit 2; }
 [[ "$BACKUP_S3_URI" == s3://* ]] || { echo "BACKUP_S3_URI must start with s3://." >&2; exit 2; }
-BACKUP_S3_URI="\${BACKUP_S3_URI%/}"
+BACKUP_S3_URI="${BACKUP_S3_URI%/}"
 mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"
 backup_output="$(bash "$SCRIPT_DIR/backup-mysql.sh")"
 printf '%s\n' "$backup_output"
