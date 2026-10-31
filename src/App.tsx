@@ -17,6 +17,8 @@ type ApiTransaction = { id:number; description:string; category:string; occurred
 
 
 
+const dateOnly = (value: Date) => `${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,"0")}-${String(value.getDate()).padStart(2,"0")}`;
+
 const money = (value: number) => new Intl.NumberFormat("en-TZ", {
   style: "currency", currency: "TZS", maximumFractionDigits: 0
 }).format(value);
@@ -146,7 +148,7 @@ function DashboardApp() {
     const now=new Date();const start=new Date(now.getFullYear(),now.getMonth(),1);const end=new Date(now.getFullYear(),now.getMonth()+1,0);
     setSaving(true);setFormError("");
     try{
-      await apiRequest("/budgets",{method:"POST",body:JSON.stringify({name:budgetForm.name.trim(),category_id:selected.id,amount:limit.toFixed(2),currency:"TZS",period:"monthly",start_date:start.toISOString().slice(0,10),end_date:end.toISOString().slice(0,10)})});
+      await apiRequest("/budgets",{method:"POST",body:JSON.stringify({name:budgetForm.name.trim(),category_id:selected.id,amount:limit.toFixed(2),currency:"TZS",period:"monthly",start_date:dateOnly(start),end_date:dateOnly(end)})});
       setBudgetForm({name:"",category:selected.name,limit:""});setBudgetFormOpen(false);await refreshFinanceData();
     }catch(error){setFormError(error instanceof Error?error.message:"Could not save budget.");}
     finally{setSaving(false);}
