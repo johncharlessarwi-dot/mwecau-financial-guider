@@ -211,7 +211,7 @@ class FinancialAuditLogTest extends TestCase
 
         $this->withoutExceptionHandling();
         AuditLog::creating(static function (): void {
-            throw new \\RuntimeException('Audit log persistence failed.');
+            throw new \RuntimeException('Audit log persistence failed.');
         });
 
         try {
@@ -223,7 +223,7 @@ class FinancialAuditLogTest extends TestCase
                 'occurred_at' => now()->toDateTimeString(),
             ]);
             $this->fail('Expected audit log persistence failure.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertSame('Audit log persistence failed.', $exception->getMessage());
         }
 
