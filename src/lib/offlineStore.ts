@@ -178,12 +178,10 @@ export async function clearUserOfflineData(userId: string | number): Promise<voi
 
     for (const storeName of ["snapshots", "outbox"]) {
       const store = transaction.objectStore(storeName);
-      const cursorRequest = store.index("userId").openKeyCursor(IDBKeyRange.only(accountId));
-      cursorRequest.onsuccess = () => {
-        const cursor = cursorRequest.result;
-        if (cursor) {
-          store.delete(cursor.primaryKey);
-          cursor.continue();
+      const request = store.getAll();
+      request.onsuccess = () => {
+        for (const record of request.result as Array<{id:string;userId:string}>) {
+          if (record.userId === accountId) store.delete(record.id);
         }
       };
     }
@@ -207,7 +205,8 @@ export async function enqueueOfflineTransaction(
   try {
     const id = accountId + ":" + idempotencyKey;
     const outbox = database.transaction("outbox", "readonly").objectStore("outbox");
-    const existing = await requestValue<EncryptedOutboxRecord | undefined>(outbox.get(id));
+    const existingRecords = await requestValue<EncryptedOutboxRecord[]>(outbox.getAll());
+    const existing = existingRecords.find((record) => record.id === id && record.userId === accountId);
     if (existing) {
       const key = await getOrCreateUserKey(database, accountId);
       const previous = await decryptValue<Record<string, unknown>>(key, existing);
@@ -242,12 +241,10 @@ export async function listPendingOfflineTransactions(
   const accountId = normalizeUserId(userId);
   const database = await openDatabase();
   try {
-    const records = await requestValue<EncryptedOutboxRecord[]>(
-      database.transaction("outbox", "readonly")
-        .objectStore("outbox")
-        .index("userId")
-        .getAll(IDBKeyRange.only(accountId))
+    const allRecords = await requestValue<EncryptedOutboxRecord[]>(
+      database.transaction("outbox", "readonly").objectStore("outbox").getAll()
     );
+    const records = allRecords.filter((record) => record.userId === accountId);
     if (records.length === 0) return [];
 
     const storedKey = await requestValue<StoredKey | undefined>(
