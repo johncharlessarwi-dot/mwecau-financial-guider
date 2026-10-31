@@ -16,7 +16,8 @@ backup_file="$(printf '%s\n' "$backup_output" | sed -n 's/^Encrypted backup crea
 checksum_file="$backup_file.sha256"
 [[ -s "$checksum_file" ]] || { echo "Backup checksum file is missing." >&2; exit 1; }
 upload_file() {
-  local file="$1" prefix="$2" destination="$BACKUP_S3_URI/$prefix/$(basename "$file")"
+  local file="$1" prefix="$2"
+  local destination="$BACKUP_S3_URI/$prefix/$(basename "$file")"
   local -a encryption_args
   case "${BACKUP_S3_SSE:-aws:kms}" in
     aws:kms)
