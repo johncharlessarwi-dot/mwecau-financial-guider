@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { listPendingOfflineTransactions, removeOfflineTransaction } from "./offlineStore";
 import { syncPendingOfflineTransactions } from "./offlineSync";
 
 const offlineMocks = vi.hoisted(() => ({
