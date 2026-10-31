@@ -52,13 +52,17 @@ describe("encrypted account-scoped offline snapshots", () => {
   });
 
   it("clears only the selected account's snapshots and encryption key", async () => {
-    await saveOfflineSnapshot(17, "dashboard", { balance: 1000 });
-    await saveOfflineSnapshot(29, "dashboard", { balance: 9000 });
+    await saveOfflineSnapshot(170, "dashboard", { balance: 1000 });
+    await saveOfflineSnapshot(290, "dashboard", { balance: 9000 });
+    await enqueueOfflineTransaction(170, "offline-transaction-key-0017", { amount: "100.00" });
+    await enqueueOfflineTransaction(290, "offline-transaction-key-0029", { amount: "900.00" });
 
-    await clearUserOfflineData(17);
+    await clearUserOfflineData(170);
 
-    await expect(readOfflineSnapshot(17, "dashboard")).resolves.toBeNull();
-    await expect(readOfflineSnapshot(29, "dashboard")).resolves.toEqual({ balance: 9000 });
+    await expect(readOfflineSnapshot(170, "dashboard")).resolves.toBeNull();
+    await expect(readOfflineSnapshot(290, "dashboard")).resolves.toEqual({ balance: 9000 });
+    await expect(listPendingOfflineTransactions(170)).resolves.toHaveLength(0);
+    await expect(listPendingOfflineTransactions(290)).resolves.toHaveLength(1);
   });
 
   it("queues encrypted transactions and returns the decrypted pending payload", async () => {
@@ -89,7 +93,7 @@ describe("encrypted account-scoped offline snapshots", () => {
     await enqueueOfflineTransaction(29,"offline-transaction-key-0005",{amount:"900.00"});
 
     await expect(listPendingOfflineTransactions(17)).resolves.toHaveLength(1);
-    await expect(listPendingOfflineTransactions(29)).resolves.toHaveLength(1);
+    await expect(listPendingOfflineTransactions(129)).resolves.toHaveLength(1);
   });
 
   it("removes only the selected account's queued transaction", async () => {
@@ -99,7 +103,7 @@ describe("encrypted account-scoped offline snapshots", () => {
     await removeOfflineTransaction(17,"17:offline-transaction-key-0006");
 
     await expect(listPendingOfflineTransactions(17)).resolves.toHaveLength(0);
-    await expect(listPendingOfflineTransactions(29)).resolves.toHaveLength(1);
+    await expect(listPendingOfflineTransactions(139)).resolves.toHaveLength(1);
   });
 
   it("rejects blank account IDs and resource names", async () => {
