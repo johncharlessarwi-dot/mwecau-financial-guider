@@ -30,7 +30,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/categories', [CategoryController::class, 'store'])->middleware('throttle:30,1');
         Route::patch('/categories/{category}', [CategoryController::class, 'update'])->middleware('throttle:30,1');
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->middleware('throttle:30,1');
-        Route::get('/budgets', [BudgetController::class, 'index']);
+        Route::get('/budgets', [BudgetController::class, 'index']);\n        Route::get('/reports/summary', [ReportController::class, 'summary'])->middleware('throttle:60,1');
         Route::post('/budgets', [BudgetController::class, 'store'])->middleware('throttle:30,1');
         Route::patch('/budgets/{budget}', [BudgetController::class, 'update'])->middleware('throttle:30,1');
         Route::delete('/budgets/{budget}', [BudgetController::class, 'destroy'])->middleware('throttle:30,1');
