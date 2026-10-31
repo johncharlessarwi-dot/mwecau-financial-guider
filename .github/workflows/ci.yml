@@ -54,8 +54,10 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Validate backup and recovery shell scripts
-        run: bash -n ../scripts/backup-mysql.sh ../scripts/restore-mysql.sh ../scripts/test-backup-restore.sh
+      - name: Validate operational shell scripts
+        run: bash -n ../scripts/backup-mysql.sh ../scripts/restore-mysql.sh ../scripts/test-backup-restore.sh ../scripts/backup-mysql-s3.sh ../scripts/validate-production-env.sh ../scripts/test-production-env.sh ../scripts/staging-smoke.sh
+      - name: Test production environment guardrails
+        run: bash ../scripts/test-production-env.sh
       - name: Install age for encrypted backup integration test
         run: sudo apt-get update && sudo apt-get install --yes age
       - name: Exercise encrypted backup and guarded restore
