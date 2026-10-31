@@ -3,7 +3,7 @@ import { apiRequest } from "./lib/api";
 import { AuthGate, useAuth } from "./auth/AuthGate";
 import {
   Activity, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Bell, BookOpen,
-  CalendarDays, Check, ChevronDown, CircleHelp, CreditCard, Download,
+  CalendarDays, Check, ChevronDown, CircleHelp, CreditCard,
   LayoutDashboard, Menu, Plus, Search, Settings, ShieldCheck, Sparkles,
   Target, TrendingUp, Wallet, X
 } from "lucide-react";
