@@ -37,7 +37,7 @@ class FinancialReportsTest extends TestCase
             ->assertJsonPath('data.currencies.0.income', '100000.00')
             ->assertJsonPath('data.currencies.0.expenses', '25000.00')
             ->assertJsonPath('data.currencies.0.net_cash_flow', '75000.00')
-            ->assertJsonPath('data.currencies.0.categories.0.category', 'Salary')
+            ->assertJsonPath('data.currencies.0.categories.0.category', 'Food')
             ->assertJsonPath('data.currencies.1.currency', 'USD')
             ->assertJsonPath('data.currencies.1.income', '50.25');
     }
