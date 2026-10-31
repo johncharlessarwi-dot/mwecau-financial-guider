@@ -178,7 +178,7 @@ jobs:
           msg["To"] = os.environ["RECIPIENT"]
           msg.set_content(
               f"MWECau GUIDER continuous integration result: {status}\n\n"
-              f"Web checks: {web}\nAPI checks: {api}\n"
+              f"Web checks: {web}\nAPI (SQLite) checks: {api}\nAPI (MySQL 8.4) checks: {mysql}\n"
               f"Repository: {os.environ['REPOSITORY']}\n"
               f"Branch: {os.environ['BRANCH']}\n"
               f"Commit: {os.environ['COMMIT_SHA']}\n"
