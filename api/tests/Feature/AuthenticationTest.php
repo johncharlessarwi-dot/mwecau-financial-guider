@@ -10,16 +10,26 @@ class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_register_and_receive_a_bearer_token(): void
+    public function test_user_can_register_and_receive_an_authenticated_session(): void
     {
-        $this->postJson('/api/v1/auth/register', [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'a-secure-password',
-        ])->assertCreated()
-          ->assertJsonPath('user.email', 'test@example.com')
-          ->assertJsonPath('token_type', 'Bearer')
-          ->assertJsonStructure(['user' => ['id', 'name', 'email'], 'token']);
+        $this->withHeader('Origin', 'http://localhost:5173')
+            ->postJson('/api/v1/auth/register', [
+                'name' => 'Test User',
+                'email' => 'TEST@example.com',
+                'password' => 'a-secure-password',
+            ])->assertCreated()
+              ->assertJsonPath('user.email', 'test@example.com')
+              ->assertJsonMissingPath('token');
+
+        $user = User::where('email', 'test@example.com')->firstOrFail();
+
+        $this->assertAuthenticatedAs($user, 'web');
+
+        $this->withHeader('Origin', 'http://localhost:5173')
+            ->getJson('/api/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('user.id', $user->id)
+            ->assertJsonPath('user.email', $user->email);
     }
 
     public function test_duplicate_email_registration_is_rejected(): void
@@ -33,12 +43,66 @@ class AuthenticationTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('email');
     }
 
-    public function test_authenticated_user_can_revoke_current_token(): void
+    public function test_user_can_login_and_logout_of_a_session(): void
     {
-        $user = User::create(['name' => 'Token User', 'email' => 'token@example.com', 'password' => 'a-secure-password']);
-        $token = $user->createToken('test')->plainTextToken;
+        $user = User::create([
+            'name' => 'Session User',
+            'email' => 'session@example.com',
+            'password' => 'a-secure-password',
+        ]);
 
-        $this->withToken($token)->postJson('/api/v1/auth/logout')
-            ->assertOk()->assertJsonPath('message', 'Session revoked.');
+        $this->withHeader('Origin', 'http://localhost:5173')
+            ->postJson('/api/v1/auth/login', [
+                'email' => 'SESSION@example.com',
+                'password' => 'a-secure-password',
+            ])->assertOk()
+              ->assertJsonPath('user.id', $user->id)
+              ->assertJsonMissingPath('token');
+
+        $this->assertAuthenticatedAs($user, 'web');
+
+        $this->withHeader('Origin', 'http://localhost:5173')
+            ->postJson('/api/v1/auth/logout')
+            ->assertOk()
+            ->assertJsonPath('message', 'Session revoked.');
+
+        $this->assertGuest('web');
+    }
+
+    public function test_login_rejects_invalid_credentials_without_disclosing_user_existence(): void
+    {
+        User::create([
+            'name' => 'Existing',
+            'email' => 'existing@example.com',
+            'password' => 'a-secure-password',
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'existing@example.com',
+            'password' => 'incorrect-password',
+        ])->assertUnprocessable()
+          ->assertJsonValidationErrors('email')
+          ->assertJsonPath('errors.email.0', 'The supplied credentials are invalid.');
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'missing@example.com',
+            'password' => 'incorrect-password',
+        ])->assertUnprocessable()
+          ->assertJsonPath('errors.email.0', 'The supplied credentials are invalid.');
+    }
+
+    public function test_authenticated_endpoint_rejects_guest_requests(): void
+    {
+        $this->getJson('/api/v1/auth/me')->assertUnauthorized();
+    }
+
+    public function test_password_is_never_returned_by_authentication_endpoints(): void
+    {
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Private User',
+            'email' => 'private@example.com',
+            'password' => 'a-secure-password',
+        ])->assertCreated()
+          ->assertJsonMissingPath('user.password');
     }
 }
