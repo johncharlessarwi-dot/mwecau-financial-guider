@@ -23,8 +23,8 @@ assert.match(worker, /url\.pathname\.startsWith\("\/sanctum\/"\)/, "Runtime sess
 
 for (const asset of assets) {
   if (asset.startsWith("/assets/") || asset.startsWith("/icons/")) {
-    assert.ok(existsSync(join(dist, asset.slice(1))), \`Precached build asset is missing: \${asset}\`);
+    assert.ok(existsSync(join(dist, asset.slice(1))), "Precached build asset is missing: " + asset);
   }
 }
 
-console.log(\`PWA build verification passed: \${assets.length} app-shell assets precached; finance API/session endpoints excluded.\`);
+console.log("PWA build verification passed: " + assets.length + " app-shell assets precached; finance API/session endpoints excluded.");
