@@ -40,7 +40,7 @@ jobs:
           const m = JSON.parse(fs.readFileSync(file, "utf8"));
           const base = "/mwecau-financial-guider/";
           m.id = base; m.start_url = base; m.scope = base;
-          m.icons = m.icons.map(i => ({...i, src: base + i.src.startsWith("/") ? i.src.slice(1) : i.src}));
+          m.icons = m.icons.map(i => ({...i, src: base + (i.src.startsWith("/") ? i.src.slice(1) : i.src)}));
           fs.writeFileSync(file, JSON.stringify(m, null, 2));
           '
       - name: Ensure GitHub Pages does not process Vite assets with Jekyll
