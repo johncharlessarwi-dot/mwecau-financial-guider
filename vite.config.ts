@@ -47,5 +47,6 @@ self.addEventListener("fetch", (event) => {
 }
 
 export default defineConfig({
-  base: basePath,\n  plugins: [react(), offlineServiceWorker()]
+  base: basePath,
+  plugins: [react(), offlineServiceWorker()]
 });
