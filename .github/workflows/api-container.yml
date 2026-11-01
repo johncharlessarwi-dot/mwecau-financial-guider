@@ -1,0 +1,50 @@
+name: Laravel Docker staging image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - '.github/workflows/api-container.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - '.github/workflows/api-container.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Validate entrypoint
+        run: sh -n api/deploy/render-entrypoint.sh
+      - name: Build Render PHP Docker image
+        run: docker build -f api/Dockerfile -t mwecau-guider-api:ci api
+      - name: Verify API health in the real container
+        run: |
+          set -euo pipefail
+          docker run -d --rm --name guider-api-ci -p 127.0.0.1:10000:10000 \
+            -e PORT=10000 -e APP_ENV=testing -e APP_DEBUG=false \
+            -e APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
+            -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
+            -e SESSION_DRIVER=array -e CACHE_STORE=array \
+            mwecau-guider-api:ci
+          trap 'docker logs guider-api-ci || true; docker rm -f guider-api-ci || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS --max-time 3 -H 'Accept: application/json' \
+              http://127.0.0.1:10000/api/v1/health | grep -q '"status":"ok"'; then
+              echo 'Laravel container health passed.'
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Laravel container never became healthy.' >&2
+          exit 1
