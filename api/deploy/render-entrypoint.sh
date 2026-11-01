@@ -20,6 +20,14 @@ if [ -n "${DB_SSL_CA_PEM:-}" ]; then
   export MYSQL_ATTR_SSL_CA=/tmp/mwecau-aiven-ca.pem
 fi
 
+# Require an explicit trusted database CA when connecting to remote MySQL
+# from a public production-mode endpoint.
+if [ "${APP_ENV:-}" = "production" ] && [ "${DB_CONNECTION:-}" = "mysql" ] \
+  && [ -z "${MYSQL_ATTR_SSL_CA:-}" ]; then
+  echo "A trusted MySQL CA certificate is required for production-mode staging." >&2
+  exit 1
+fi
+
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   echo "Applying Laravel database migrations."
   php artisan migrate --force --no-interaction
