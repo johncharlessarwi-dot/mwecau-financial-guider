@@ -63,7 +63,7 @@ class FinancialReportsTest extends TestCase
         Transaction::create(['user_id' => $user->id, 'account_id' => $account->id, 'type' => 'income', 'amount' => '1200.00', 'currency' => 'TZS', 'category' => 'Salary', 'description' => 'Salary', 'occurred_at' => '2026-10-10 10:00:00', 'status' => 'confirmed']);
 
         Sanctum::actingAs($user, ['read', 'write']);
-        $this->getJson('/api/v1/reports/summary?currency=TZS')
+        $this->getJson('/api/v1/reports/summary?currency=TZS&from=2026-10-01&to=2026-10-31')
             ->assertOk()
             ->assertJsonCount(1, 'data.currencies')
             ->assertJsonPath('data.currencies.0.income', '1200.00');

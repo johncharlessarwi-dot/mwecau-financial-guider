@@ -1,7 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
-const basePath = (process.env.VITE_BASE_PATH || "/").replace(/\/?$/, "/");
+const basePath = "/";
 
 function offlineServiceWorker(): Plugin {
   return {
@@ -12,7 +12,8 @@ function offlineServiceWorker(): Plugin {
         /\.(?:js|css|svg|woff2?)$/.test(file)
       );
       const precache = [basePath, `${basePath}index.html`, `${basePath}manifest.webmanifest`, `${basePath}icons/guider-icon.svg`, ...assets.map((file) => `${basePath}${file}`)];
-      const version = assets.join("|").length.toString(36);
+      const version = [...assets.sort().join("|")].reduce((hash, char) =>
+        Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0, 2166136261).toString(36);
       const source = `const BASE_PATH = ${JSON.stringify(basePath)};\nconst CACHE_NAME = "mwecau-guider-shell-${version}";
 const PRECACHE_URLS = ${JSON.stringify([...new Set(precache)])};
 

@@ -41,6 +41,8 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+      - name: Verify Cloudflare Pages SEO and PWA artifacts
+        run: node scripts/verify-cloudflare-build.mjs
 
   verify-api:
     name: Validate Laravel API and run feature tests
