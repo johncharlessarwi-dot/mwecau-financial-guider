@@ -28,7 +28,12 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA')]) : [],
+            'options' => extension_loaded('pdo_mysql') && env('MYSQL_ATTR_SSL_CA')
+                ? [
+                    PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                    PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => true,
+                ]
+                : [],
         ],
     ],
     'migrations' => ['table' => 'migrations', 'update_date_on_publish' => true],
