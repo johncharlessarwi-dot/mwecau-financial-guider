@@ -1,3 +1,5 @@
+> **Hosting update (November 2026):** This document covers an optional migration to Cloudflare **Pages**. The current frontend hostname is `https://mwecau-financial-guider.johncharlessarwi.workers.dev/`; for current registration/API deployment guidance see [Cloudflare Workers API setup](CLOUDFLARE_WORKERS_API_SETUP.md). Do not use this document's pages.dev URLs for the current site's Search Console property.
+
 # Cloudflare Pages — MWECau Financial Guider
 
 This document describes deployment of the **React/Vite frontend only**. Cloudflare Pages does not execute this repository's Laravel PHP API or host its MySQL database.
