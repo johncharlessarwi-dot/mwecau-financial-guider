@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://mwecau-financial-guider.pages.dev/sitemap.xml
+Sitemap: https://mwecau-financial-guider.johncharlessarwi.workers.dev/sitemap.xml
