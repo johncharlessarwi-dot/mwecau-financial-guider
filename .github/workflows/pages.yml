@@ -32,6 +32,17 @@ jobs:
           VITE_BASE_PATH: /mwecau-financial-guider/
           VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: npm run build
+      - name: Scope installable PWA manifest to GitHub Pages
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const file = "dist/manifest.webmanifest";
+          const m = JSON.parse(fs.readFileSync(file, "utf8"));
+          const base = "/mwecau-financial-guider/";
+          m.id = base; m.start_url = base; m.scope = base;
+          m.icons = m.icons.map(i => ({...i, src: base + i.src.replace(/^\\//, "")}));
+          fs.writeFileSync(file, JSON.stringify(m, null, 2));
+          '
       - name: Ensure GitHub Pages does not process Vite assets with Jekyll
         run: touch dist/.nojekyll
       - uses: actions/configure-pages@v5
