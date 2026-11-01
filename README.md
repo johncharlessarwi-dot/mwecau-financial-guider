@@ -25,6 +25,14 @@ See:
 - [Security and privacy principles](SECURITY.md)
 
 
+## Cloudflare Pages frontend hosting
+
+The public React/PWA frontend is prepared for Cloudflare Pages Git integration (production branch `main`, build `npm run build && node scripts/verify-cloudflare-build.mjs`, output `dist`, Node 22). The preferred hostname is `mwecau-financial-guider.pages.dev`, **subject to account setup and name availability**. The former GitHub Pages deployment workflow was retired to avoid competing production destinations.
+
+See [Cloudflare deployment and Search Console guide](docs/CLOUDFLARE_PAGES_DEPLOYMENT.md).
+
+**Deployment warning:** A Pages frontend alone is not a functioning financial SaaS. Laravel API/MySQL hosting, secure session topology, production backups, staging QA and monitoring must still be verified before enabling real user financial data.
+
 ## Local development: authenticated SPA
 
 The web client uses Laravel Sanctum's stateful, cookie-based SPA authentication. It does not persist bearer tokens in local storage.
