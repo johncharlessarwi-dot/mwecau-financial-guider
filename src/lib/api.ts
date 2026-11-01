@@ -1,4 +1,4 @@
-const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
+import { API_ORIGIN, API_UNAVAILABLE_MESSAGE } from "./apiConfig";
 
 export class ApiRequestError extends Error {
   constructor(message: string, public readonly status: number | null) {
@@ -13,6 +13,7 @@ function readXsrfToken(): string {
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  if (!API_ORIGIN) throw new ApiRequestError(API_UNAVAILABLE_MESSAGE, null);
   const method = (options.method || "GET").toUpperCase();
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     let csrf: Response;

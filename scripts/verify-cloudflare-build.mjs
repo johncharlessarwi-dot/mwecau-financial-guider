@@ -7,7 +7,7 @@ const [html, robots, sitemap, manifestText, sw, headers] = await Promise.all([
   read("index.html"), read("robots.txt"), read("sitemap.xml"),
   read("manifest.webmanifest"), read("sw.js"), read("_headers")
 ]);
-const expected = "https://mwecau-financial-guider.pages.dev/";
+const expected = "https://mwecau-financial-guider.johncharlessarwi.workers.dev/";
 
 assert.ok(html.includes(`rel="canonical" href="${expected}"`), "Canonical URL must target Cloudflare Pages");
 assert.ok(html.includes(`property="og:url" content="${expected}"`), "Open Graph URL must match canonical");

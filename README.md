@@ -25,13 +25,17 @@ See:
 - [Security and privacy principles](SECURITY.md)
 
 
-## Cloudflare Pages frontend hosting
+## Cloudflare Workers frontend hosting
 
-The public React/PWA frontend is prepared for Cloudflare Pages Git integration (production branch `main`, build `npm run build && node scripts/verify-cloudflare-build.mjs`, output `dist`, Node 22). The preferred hostname is `mwecau-financial-guider.pages.dev`, **subject to account setup and name availability**. The former GitHub Pages deployment workflow was retired to avoid competing production destinations.
+The public React/PWA frontend is hosted by the project owner at
+**https://mwecau-financial-guider.johncharlessarwi.workers.dev/** (live endpoint availability must be checked separately).
+It is hosted using Cloudflare Workers static assets, not a Laravel web server. SEO canonical URL, sitemap and Google Search Console verification meta tag target this Workers hostname.
 
-See [Cloudflare deployment and Search Console guide](docs/CLOUDFLARE_PAGES_DEPLOYMENT.md).
+**Important:** Until a real HTTPS Laravel API is connected at build time with `VITE_API_URL`, sign-in and registration are deliberately disabled. The frontend never sends user credentials to localhost in production. Adding a Cloudflare runtime variable without rebuilding the Vite assets does not supply `import.meta.env.VITE_API_URL` to the compiled JavaScript.
 
-**Deployment warning:** A Pages frontend alone is not a functioning financial SaaS. Laravel API/MySQL hosting, secure session topology, production backups, staging QA and monitoring must still be verified before enabling real user financial data.
+See [Cloudflare Workers and backend connection guide](docs/CLOUDFLARE_WORKERS_API_SETUP.md). The old [Pages setup guide](docs/CLOUDFLARE_PAGES_DEPLOYMENT.md) is retained only for teams that later choose to migrate to `pages.dev`; it is not the current production host.
+
+**Deployment warning:** A live Worker frontend alone is not a functioning financial SaaS. Laravel API/MySQL hosting, session cookie topology, backups, staging QA and monitoring must still be verified before accepting actual user financial information.
 
 ## Local development: authenticated SPA
 
