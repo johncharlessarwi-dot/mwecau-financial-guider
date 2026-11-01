@@ -37,6 +37,12 @@ See [Cloudflare Workers and backend connection guide](docs/CLOUDFLARE_WORKERS_AP
 
 **Deployment warning:** A live Worker frontend alone is not a functioning financial SaaS. Laravel API/MySQL hosting, session cookie topology, backups, staging QA and monitoring must still be verified before accepting actual user financial information.
 
+## Backend staging (Render + Aiven)
+
+A Render-compatible PHP 8.3 Docker image, startup script, container smoke test, and a provider setup guide are available under `api/` and [Render + Aiven staging instructions](docs/RENDER_AIVEN_STAGING.md).
+
+**Do not enable live financial registrations** until the Laravel API and MySQL are actually deployed, the Cloudflare/Render same-origin authentication topology is verified, and backup/restore tests have passed. Cloudflare Workers currently hosts the frontend only.
+
 ## Local development: authenticated SPA
 
 The web client uses Laravel Sanctum's stateful, cookie-based SPA authentication. It does not persist bearer tokens in local storage.
