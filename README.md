@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/readme/project-motion.svg" width="100%" alt="MWECAU FINANCIAL GUIDER animated overview banner" />
+</div>
+
 # MWECau GUIDER
 
 **Your Money. Your Decisions. Your Future.**
