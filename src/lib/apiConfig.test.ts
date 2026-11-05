@@ -26,4 +26,12 @@ describe("finance API origin security", () => {
     expect(resolveApiOrigin(undefined, false)).toBe("http://localhost:8000");
     expect(resolveApiOrigin("http://localhost:9000", false)).toBe("http://localhost:9000");
   });
+
+  it("blocks production HTTPS loopback and localhost origins", () => {
+    for (const origin of [
+      "https://localhost", "https://api.localhost", "https://127.0.0.1",
+      "https://127.1.2.3", "https://[::1]", "https://0.0.0.0",
+    ]) expect(resolveApiOrigin(origin, true)).toBeNull();
+    expect(resolveApiOrigin("https://finance.example.com", true)).toBe("https://finance.example.com");
+  });
 });
