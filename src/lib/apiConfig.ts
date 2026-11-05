@@ -12,8 +12,12 @@ export function resolveApiOrigin(configured: string | undefined, production: boo
   try {
     const url = new URL(candidate);
     const secure = url.protocol === "https:";
+    const host = url.hostname.toLowerCase();
+    const localHost = host === "localhost" || host.endsWith(".localhost") ||
+      host === "127.0.0.1" || host.startsWith("127.") ||
+      host === "[::1]" || host === "0.0.0.0";
     const allowedProtocol = secure || (!production && url.protocol === "http:");
-    if (!allowedProtocol || url.username || url.password || url.search || url.hash || url.pathname !== "/") {
+    if ((production && localHost) || !allowedProtocol || url.username || url.password || url.search || url.hash || url.pathname !== "/") {
       return null;
     }
     return url.origin;
