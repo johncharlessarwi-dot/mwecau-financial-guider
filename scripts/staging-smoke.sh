@@ -17,6 +17,7 @@ curl --silent --show-error --max-time 20 -X OPTIONS \
   -H "Origin: $STAGING_WEB_ORIGIN" -H 'Access-Control-Request-Method: POST' \
   -H 'Access-Control-Request-Headers: content-type,x-xsrf-token' \
   -D "$tmp/cors.headers" -o /dev/null "${STAGING_API_URL%/}/api/v1/auth/login"
-grep -Fqi "access-control-allow-origin: $STAGING_WEB_ORIGIN" "$tmp/cors.headers" || { echo "CORS did not return exact staging origin." >&2; exit 1; }
+actual_origin="$(sed -n '/^[Aa]ccess-[Cc]ontrol-[Aa]llow-[Oo]rigin:/ { s/^[^:]*:[[:space:]]*//; s/\r$//; p; }' "$tmp/cors.headers" | head -n 1)"
+[[ "$actual_origin" == "$STAGING_WEB_ORIGIN" ]] || { echo "CORS did not return exact staging origin." >&2; exit 1; }
 grep -Eiq '^access-control-allow-credentials:[[:space:]]*true' "$tmp/cors.headers" || { echo "CORS credentials are not enabled for approved origin." >&2; exit 1; }
 echo "Staging HTTPS, API health, HSTS and CORS smoke checks passed."
