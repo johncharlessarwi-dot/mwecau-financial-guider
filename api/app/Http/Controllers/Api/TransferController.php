@@ -33,7 +33,7 @@ class TransferController extends Controller
             return response()->json($this->transferResponseBody($transfer), 201);
         }
 
-        if (strlen($idempotencyKey) < 16 || strlen($idempotencyKey) > 128) {
+        if (! preg_match('/^[A-Za-z0-9._:-]{16,128}$/D', $idempotencyKey)) {
             return response()->json(['message' => 'Idempotency-Key must contain between 16 and 128 characters.'], 422);
         }
 
