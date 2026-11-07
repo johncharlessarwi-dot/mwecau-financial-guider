@@ -163,4 +163,11 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/transfers', $payload)->assertCreated()->assertJsonPath('data.0.amount', '12.34');
     }
 
+    public function test_transaction_rejects_an_idempotency_key_with_whitespace(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $this->withToken($token)->withHeader('Idempotency-Key', 'invalid key with spaces')->postJson('/api/v1/transactions', $this->transactionPayload($wallet))->assertUnprocessable();
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
 }
