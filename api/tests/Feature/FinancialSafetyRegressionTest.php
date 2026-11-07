@@ -155,4 +155,12 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/transactions', $payload)->assertCreated()->assertJsonPath('data.amount', '12.34');
     }
 
+    public function test_transfer_accepts_exactly_two_decimal_places(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $payload = $this->transferPayload($wallet, $bank);
+        $payload['amount'] = '12.34';
+        $this->withToken($token)->postJson('/api/v1/transfers', $payload)->assertCreated()->assertJsonPath('data.0.amount', '12.34');
+    }
+
 }
