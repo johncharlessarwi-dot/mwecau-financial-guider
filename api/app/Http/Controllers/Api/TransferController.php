@@ -21,7 +21,7 @@ class TransferController extends Controller
         $data = $request->validate([
             'from_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('user_id', $user->id)->where('is_active', true)],
             'to_account_id' => ['required', 'integer', 'different:from_account_id', Rule::exists('accounts', 'id')->where('user_id', $user->id)->where('is_active', true)],
-            'amount' => ['required', 'numeric', 'gt:0', 'max:9999999999999999.99'],
+            'amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:9999999999999999.99'],
             'description' => ['nullable', 'string', 'max:180'],
             'occurred_at' => ['sometimes', 'date'],
         ]);
