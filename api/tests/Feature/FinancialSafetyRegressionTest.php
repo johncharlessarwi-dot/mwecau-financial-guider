@@ -229,4 +229,14 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->assertDatabaseCount('transactions', 2);
     }
 
+    public function test_transfer_replay_with_matching_idempotency_key_stays_safe(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $key = 'same-transfer-key-repeat-001';
+        $payload = $this->transferPayload($wallet, $bank);
+        $first = $this->withToken($token)->withHeader('Idempotency-Key', $key)->postJson('/api/v1/transfers', $payload)->assertCreated();
+        $this->withToken($token)->withHeader('Idempotency-Key', $key)->postJson('/api/v1/transfers', $payload)->assertCreated()->assertJsonPath('transfer_reference', $first->json('transfer_reference'));
+        $this->assertDatabaseCount('transactions', 2);
+    }
+
 }
