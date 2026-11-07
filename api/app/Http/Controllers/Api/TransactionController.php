@@ -158,7 +158,7 @@ class TransactionController extends Controller
         $data = $request->validate([
             'account_id' => ['sometimes', 'required', 'integer', Rule::exists('accounts', 'id')->where('user_id', $request->user()->id)->where('is_active', true)],
             'type' => ['sometimes', 'required', 'in:income,expense'],
-            'amount' => ['sometimes', 'required', 'numeric', 'gt:0', 'max:9999999999999999.99'],
+            'amount' => ['sometimes', 'required', 'numeric', 'decimal:0,2', 'gt:0', 'max:9999999999999999.99'],
             'currency' => ['sometimes', 'required', 'in:TZS,USD'],
             'category' => ['sometimes', 'required', 'string', 'max:60'],
             'description' => ['sometimes', 'required', 'string', 'max:180'],
