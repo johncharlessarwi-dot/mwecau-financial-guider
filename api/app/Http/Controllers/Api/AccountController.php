@@ -24,7 +24,7 @@ class AccountController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:80'],
+            'name' => ['required', 'string', 'min:2', 'max:80'],
             'type' => ['required', 'in:cash,bank,mobile_money,savings,other'],
             'currency' => ['sometimes', 'required', 'in:TZS,USD'],
             'opening_balance' => ['sometimes', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999999999.99'],
