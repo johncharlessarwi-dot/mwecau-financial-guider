@@ -183,4 +183,10 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->withHeader('Idempotency-Key', "invalid-key-with\t-tab")->postJson('/api/v1/transactions', $this->transactionPayload($wallet))->assertUnprocessable();
     }
 
+    public function test_transfer_rejects_control_characters_in_idempotency_key(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $this->withToken($token)->withHeader('Idempotency-Key', "invalid-key-with\t-tab")->postJson('/api/v1/transfers', $this->transferPayload($wallet, $bank))->assertUnprocessable();
+    }
+
 }
