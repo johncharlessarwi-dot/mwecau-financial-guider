@@ -22,7 +22,7 @@ class TransactionController extends Controller
             'category' => ['sometimes', 'string', 'max:60'],
             'from' => ['sometimes', 'date'],
             'to' => ['sometimes', 'date', 'after_or_equal:from'],
-            'search' => ['sometimes', 'string', 'max:100'],
+            'search' => ['sometimes', 'string', 'min:2', 'max:100'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
