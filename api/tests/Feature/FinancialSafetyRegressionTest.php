@@ -77,4 +77,12 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->assertDatabaseCount('transactions', 0);
     }
 
+    public function test_transfer_rejects_fractional_cents(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $payload = $this->transferPayload($wallet, $bank);
+        $payload['amount'] = '10.001';
+        $this->withToken($token)->postJson('/api/v1/transfers', $payload)->assertUnprocessable()->assertJsonValidationErrors('amount');
+    }
+
 }
