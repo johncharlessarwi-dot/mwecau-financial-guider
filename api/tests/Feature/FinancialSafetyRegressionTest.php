@@ -30,4 +30,12 @@ class FinancialSafetyRegressionTest extends TestCase
         return ['account_id' => $wallet->id, 'type' => 'expense', 'amount' => '100.00',
             'description' => 'Safety test', 'occurred_at' => '2026-10-31 10:00:00'];
     }
+    public function test_transfer_ledger_entries_cannot_be_edited(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $id = $this->withToken($token)->postJson('/api/v1/transfers', $this->transferPayload($wallet, $bank))->assertCreated()->json('data.0.id');
+        $this->withToken($token)->patchJson('/api/v1/transactions/'.$id, ['amount' => '1.00'])->assertStatus(409);
+        $this->assertDatabaseHas('transactions', ['id' => $id, 'amount' => '100.00']);
+    }
+
 }
