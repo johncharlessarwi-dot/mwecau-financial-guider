@@ -133,4 +133,12 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->patchJson('/api/v1/transactions/'.$id, ['description' => 'Reconciled'])->assertOk()->assertJsonPath('data.description', 'Reconciled');
     }
 
+    public function test_regular_transaction_still_allows_deletion(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $id = $this->withToken($token)->postJson('/api/v1/transactions', $this->transactionPayload($wallet))->assertCreated()->json('data.id');
+        $this->withToken($token)->deleteJson('/api/v1/transactions/'.$id)->assertOk();
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
 }
