@@ -194,7 +194,7 @@ export async function clearUserOfflineData(userId: string | number): Promise<voi
 
 export async function enqueueOfflineTransaction(userId: string | number, idempotencyKey: string, payload: Record<string, unknown>): Promise<void> {
   const accountId = normalizeUserId(userId);
-  if (idempotencyKey.length < 16 || idempotencyKey.length > 128) {
+  if (!/^[A-Za-z0-9._:-]{16,128}$/.test(idempotencyKey)) {
     throw new Error("A valid idempotency key is required for the offline transaction queue.");
   }
   const database = await openDatabase();
