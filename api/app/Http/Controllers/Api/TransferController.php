@@ -23,7 +23,7 @@ class TransferController extends Controller
             'to_account_id' => ['required', 'integer', 'different:from_account_id', Rule::exists('accounts', 'id')->where('user_id', $user->id)->where('is_active', true)],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:9999999999999999.99'],
             'description' => ['nullable', 'string', 'max:180'],
-            'occurred_at' => ['sometimes', 'date'],
+            'occurred_at' => ['sometimes', 'date', 'before_or_equal:tomorrow'],
         ]);
 
         $idempotencyKey = $request->header('Idempotency-Key');
