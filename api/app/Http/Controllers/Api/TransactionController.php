@@ -187,6 +187,7 @@ class TransactionController extends Controller
     public function destroy(Request $request, Transaction $transaction): JsonResponse
     {
         abort_unless($transaction->user_id === $request->user()->id, 404);
+        abort_if($transaction->transfer_reference !== null, 409, 'Linked transfer entries cannot be deleted individually.');
         DB::transaction(fn () => $transaction->delete());
 
         return response()->json(['message' => 'Transaction deleted.']);
