@@ -170,4 +170,11 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->assertDatabaseCount('transactions', 0);
     }
 
+    public function test_transfer_rejects_an_idempotency_key_with_whitespace(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $this->withToken($token)->withHeader('Idempotency-Key', 'invalid key with spaces')->postJson('/api/v1/transfers', $this->transferPayload($wallet, $bank))->assertUnprocessable();
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
 }
