@@ -118,4 +118,12 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->getJson('/api/v1/transactions?search=a')->assertUnprocessable()->assertJsonValidationErrors('search');
     }
 
+    public function test_transaction_update_rejects_inactive_account(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $id = $this->withToken($token)->postJson('/api/v1/transactions', $this->transactionPayload($wallet))->assertCreated()->json('data.id');
+        $wallet->update(['is_active' => false]);
+        $this->withToken($token)->patchJson('/api/v1/transactions/'.$id, ['description' => 'Changed'])->assertNotFound();
+    }
+
 }
