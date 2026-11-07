@@ -38,4 +38,12 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->assertDatabaseHas('transactions', ['id' => $id, 'amount' => '100.00']);
     }
 
+    public function test_transfer_ledger_entries_cannot_be_deleted(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $id = $this->withToken($token)->postJson('/api/v1/transfers', $this->transferPayload($wallet, $bank))->assertCreated()->json('data.0.id');
+        $this->withToken($token)->deleteJson('/api/v1/transactions/'.$id)->assertStatus(409);
+        $this->assertDatabaseCount('transactions', 2);
+    }
+
 }
