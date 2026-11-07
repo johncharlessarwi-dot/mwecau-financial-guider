@@ -37,7 +37,7 @@ class TransferController extends Controller
             return response()->json(['message' => 'Idempotency-Key must contain between 16 and 128 characters.'], 422);
         }
 
-        $requestHash = hash('sha256', json_encode($data, JSON_THROW_ON_ERROR));
+        $requestHash = hash('sha256', 'transfer:'.json_encode($data, JSON_THROW_ON_ERROR));
 
         try {
             return DB::transaction(function () use ($user, $data, $idempotencyKey, $requestHash): JsonResponse {
