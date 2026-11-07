@@ -220,4 +220,13 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->assertDatabaseCount('transactions', 1);
     }
 
+    public function test_idempotency_key_cannot_switch_from_transfer_to_transaction(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $key = 'same-key-cross-endpoint-002';
+        $this->withToken($token)->withHeader('Idempotency-Key', $key)->postJson('/api/v1/transfers', $this->transferPayload($wallet, $bank))->assertCreated();
+        $this->withToken($token)->withHeader('Idempotency-Key', $key)->postJson('/api/v1/transactions', $this->transactionPayload($wallet))->assertStatus(409);
+        $this->assertDatabaseCount('transactions', 2);
+    }
+
 }
