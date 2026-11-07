@@ -167,7 +167,7 @@ class TransactionController extends Controller
         ]);
 
         $accountId = $data['account_id'] ?? $transaction->account_id;
-        $account = $request->user()->accounts()->whereKey($accountId)->firstOrFail();
+        $account = $request->user()->accounts()->whereKey($accountId)->where('is_active', true)->firstOrFail();
         $currency = $data['currency'] ?? $account->currency;
 
         if ($currency !== $account->currency) {
