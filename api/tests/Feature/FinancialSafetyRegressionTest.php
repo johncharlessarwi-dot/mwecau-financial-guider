@@ -112,4 +112,10 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->getJson('/api/v1/transactions?from=2026-11-02&to=2026-11-01')->assertUnprocessable()->assertJsonValidationErrors('to');
     }
 
+    public function test_transaction_search_rejects_single_letter(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $this->withToken($token)->getJson('/api/v1/transactions?search=a')->assertUnprocessable()->assertJsonValidationErrors('search');
+    }
+
 }
