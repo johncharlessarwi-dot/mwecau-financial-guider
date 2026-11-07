@@ -229,7 +229,7 @@ export async function listPendingOfflineTransactions(userId: string | number): P
     const allRecords = await requestValue<EncryptedOutboxRecord[]>(
       database.transaction("outbox", "readonly").objectStore("outbox").index("userId").getAll(IDBKeyRange.only(accountId))
     );
-    const records = allRecords.filter((record) => record.userId === accountId);
+    const records = allRecords.filter((record) => record.userId === accountId).sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
     if (records.length === 0) return [];
     const storedKey = await requestValue<StoredKey | undefined>(
       database.transaction("outboxKeys", "readonly").objectStore("outboxKeys").get(accountId)
