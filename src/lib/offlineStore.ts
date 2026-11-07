@@ -201,8 +201,7 @@ export async function enqueueOfflineTransaction(userId: string | number, idempot
   try {
     const id = accountId + ":" + idempotencyKey;
     const outbox = database.transaction("outbox", "readonly").objectStore("outbox");
-    const existingRecords = await requestValue<EncryptedOutboxRecord[]>(outbox.getAll());
-    const existing = existingRecords.find((record) => record.id === id && record.userId === accountId);
+    const existing = await requestValue<EncryptedOutboxRecord | undefined>(outbox.get(id));
     const key = await getOrCreateUserKey(database, accountId, "outboxKeys");
     if (existing) {
       const previous = await decryptValue<Record<string, unknown>>(key, existing);
