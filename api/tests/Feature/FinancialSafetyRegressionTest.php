@@ -69,4 +69,12 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->assertDatabaseCount('transactions', 0);
     }
 
+    public function test_inactive_transfer_destination_is_rejected(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $bank->update(['is_active' => false]);
+        $this->withToken($token)->postJson('/api/v1/transfers', $this->transferPayload($wallet, $bank))->assertUnprocessable();
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
 }
