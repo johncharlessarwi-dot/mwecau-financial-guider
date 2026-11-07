@@ -100,4 +100,10 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->patchJson('/api/v1/transactions/'.$id, ['amount' => '10.001'])->assertUnprocessable()->assertJsonValidationErrors('amount');
     }
 
+    public function test_account_create_rejects_fractional_cents(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $this->withToken($token)->postJson('/api/v1/accounts', ['name' => 'Fractions', 'type' => 'cash', 'opening_balance' => '0.001'])->assertUnprocessable()->assertJsonValidationErrors('opening_balance');
+    }
+
 }
