@@ -51,7 +51,7 @@ class TransactionController extends Controller
             'currency' => ['sometimes', 'required', 'in:TZS,USD'],
             'category' => ['sometimes', 'string', 'max:60'],
             'description' => ['required', 'string', 'max:180'],
-            'occurred_at' => ['required', 'date'],
+            'occurred_at' => ['required', 'date', 'before_or_equal:tomorrow'],
             'reference' => ['nullable', 'string', 'max:80'],
         ]);
 
