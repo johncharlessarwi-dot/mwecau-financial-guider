@@ -79,7 +79,7 @@ class TransactionController extends Controller
         }
 
         $user = $request->user();
-        $requestHash = hash('sha256', json_encode($data, JSON_THROW_ON_ERROR));
+        $requestHash = hash('sha256', 'transaction:'.json_encode($data, JSON_THROW_ON_ERROR));
 
         try {
             return DB::transaction(function () use ($user, $account, $data, $idempotencyKey, $requestHash): JsonResponse {
