@@ -106,4 +106,10 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/accounts', ['name' => 'Fractions', 'type' => 'cash', 'opening_balance' => '0.001'])->assertUnprocessable()->assertJsonValidationErrors('opening_balance');
     }
 
+    public function test_transaction_filter_rejects_backwards_dates(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $this->withToken($token)->getJson('/api/v1/transactions?from=2026-11-02&to=2026-11-01')->assertUnprocessable()->assertJsonValidationErrors('to');
+    }
+
 }
