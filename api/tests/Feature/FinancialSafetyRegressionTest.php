@@ -141,4 +141,10 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->assertDatabaseCount('transactions', 0);
     }
 
+    public function test_account_accepts_exactly_two_decimal_places(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $this->withToken($token)->postJson('/api/v1/accounts', ['name' => 'Savings', 'type' => 'bank', 'opening_balance' => '123.45'])->assertCreated()->assertJsonPath('data.opening_balance', '123.45');
+    }
+
 }
