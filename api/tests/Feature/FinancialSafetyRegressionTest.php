@@ -46,4 +46,11 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->assertDatabaseCount('transactions', 2);
     }
 
+    public function test_transfer_credit_leg_cannot_be_edited(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $id = $this->withToken($token)->postJson('/api/v1/transfers', $this->transferPayload($wallet, $bank))->assertCreated()->json('data.1.id');
+        $this->withToken($token)->patchJson('/api/v1/transactions/'.$id, ['description' => 'Tampered'])->assertStatus(409);
+    }
+
 }
