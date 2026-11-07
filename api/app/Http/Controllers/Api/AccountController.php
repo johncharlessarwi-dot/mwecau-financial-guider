@@ -27,7 +27,7 @@ class AccountController extends Controller
             'name' => ['required', 'string', 'max:80'],
             'type' => ['required', 'in:cash,bank,mobile_money,savings,other'],
             'currency' => ['sometimes', 'required', 'in:TZS,USD'],
-            'opening_balance' => ['sometimes', 'numeric', 'min:0', 'max:9999999999999999.99'],
+            'opening_balance' => ['sometimes', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999999999.99'],
         ]);
 
         $account = DB::transaction(fn () => $request->user()->accounts()->create($data + [
