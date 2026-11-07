@@ -105,7 +105,7 @@ class TransferController extends Controller
         $source = $accounts->get($data['from_account_id']);
         $destination = $accounts->get($data['to_account_id']);
 
-        if (! $source || ! $destination) {
+        if (! $source || ! $destination || ! $source->is_active || ! $destination->is_active) {
             throw ValidationException::withMessages(['account_id' => 'Both accounts must belong to your profile and be active.']);
         }
 
