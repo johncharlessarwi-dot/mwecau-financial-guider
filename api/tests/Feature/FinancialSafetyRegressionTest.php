@@ -189,4 +189,12 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->withHeader('Idempotency-Key', "invalid-key-with\t-tab")->postJson('/api/v1/transfers', $this->transferPayload($wallet, $bank))->assertUnprocessable();
     }
 
+    public function test_transaction_rejects_future_dated_ledger_event(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $payload = $this->transactionPayload($wallet);
+        $payload['occurred_at'] = '2099-01-01';
+        $this->withToken($token)->postJson('/api/v1/transactions', $payload)->assertUnprocessable()->assertJsonValidationErrors('occurred_at');
+    }
+
 }
