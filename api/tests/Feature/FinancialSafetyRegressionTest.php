@@ -197,4 +197,12 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/transactions', $payload)->assertUnprocessable()->assertJsonValidationErrors('occurred_at');
     }
 
+    public function test_transfer_rejects_future_dated_event(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $payload = $this->transferPayload($wallet, $bank);
+        $payload['occurred_at'] = '2099-01-01';
+        $this->withToken($token)->postJson('/api/v1/transfers', $payload)->assertUnprocessable()->assertJsonValidationErrors('occurred_at');
+    }
+
 }
