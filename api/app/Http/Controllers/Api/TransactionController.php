@@ -153,6 +153,7 @@ class TransactionController extends Controller
     public function update(Request $request, Transaction $transaction): JsonResponse
     {
         abort_unless($transaction->user_id === $request->user()->id, 404);
+        abort_if($transaction->transfer_reference !== null, 409, 'Linked transfer entries cannot be edited individually.');
 
         $data = $request->validate([
             'account_id' => ['sometimes', 'required', 'integer', Rule::exists('accounts', 'id')->where('user_id', $request->user()->id)->where('is_active', true)],
