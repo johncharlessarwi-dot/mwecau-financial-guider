@@ -205,4 +205,10 @@ class FinancialSafetyRegressionTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/transfers', $payload)->assertUnprocessable()->assertJsonValidationErrors('occurred_at');
     }
 
+    public function test_account_rejects_single_character_name(): void
+    {
+        [$user, $wallet, $bank, $token] = $this->session();
+        $this->withToken($token)->postJson('/api/v1/accounts', ['name' => 'X', 'type' => 'cash'])->assertUnprocessable()->assertJsonValidationErrors('name');
+    }
+
 }
