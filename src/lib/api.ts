@@ -7,9 +7,15 @@ export class ApiRequestError extends Error {
   }
 }
 
-function readXsrfToken(): string {
-  const item = document.cookie.split("; ").find(part => part.startsWith("XSRF-TOKEN="));
-  return item ? decodeURIComponent(item.slice("XSRF-TOKEN=".length)) : "";
+export function readXsrfToken(): string {
+  const item = document.cookie.split(";").map(part => part.trim()).find(part => part.startsWith("XSRF-TOKEN="));
+  if (!item) return "";
+  try {
+    return decodeURIComponent(item.slice("XSRF-TOKEN=".length));
+  } catch {
+    // A malformed cookie must not crash the API client or send an untrusted token.
+    return "";
+  }
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
