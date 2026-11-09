@@ -1,8 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiRequest, ApiRequestError } from "./api";
+import { apiRequest, ApiRequestError, readXsrfToken } from "./api";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  document.cookie = "XSRF-TOKEN=; Max-Age=0; Path=/";
+});
+
+describe("XSRF token parsing", () => {
+  it("decodes a valid encoded token", () => {
+    document.cookie = "XSRF-TOKEN=abc%3D%3D; Path=/";
+    expect(readXsrfToken()).toBe("abc==");
+  });
+
+  it("ignores malformed percent encoding instead of crashing requests", () => {
+    document.cookie = "XSRF-TOKEN=%E0%A4%A; Path=/";
+    expect(readXsrfToken()).toBe("");
+  });
 });
 
 describe("authenticated API error classification", () => {
