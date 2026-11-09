@@ -19,6 +19,23 @@ describe("XSRF token parsing", () => {
 });
 
 describe("authenticated API error classification", () => {
+  it("handles a null error response without losing the HTTP status", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("null", { status: 500 })));
+    await expect(apiRequest("/accounts")).rejects.toMatchObject({
+      name: "ApiRequestError", status: 500, message: "The request could not be completed."
+    });
+  });
+
+  it("does not trust object-valued server error messages", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: { unexpected: "payload" } }), { status: 503 })
+    ));
+    await expect(apiRequest("/accounts")).rejects.toMatchObject({
+      name: "ApiRequestError", status: 503, message: "The request could not be completed."
+    });
+  });
+
+
   it("preserves 401 status so the app can clear private offline data", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ message: "Unauthenticated." }), { status: 401 })
