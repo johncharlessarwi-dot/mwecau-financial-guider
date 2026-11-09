@@ -44,15 +44,19 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     throw new ApiRequestError("The finance API could not be reached. Check your connection and try again.", null);
   }
 
-  const body = await response.json().catch(() => ({}));
+  const rawBody: unknown = await response.json().catch(() => ({}));
+  const body = rawBody !== null && typeof rawBody === "object" && !Array.isArray(rawBody)
+    ? rawBody as Record<string, unknown>
+    : {};
   if (!response.ok) {
-    if (response.status === 422 && body.errors) {
+    if (response.status === 422 && body.errors && typeof body.errors === "object" && !Array.isArray(body.errors)) {
       const first = Object.values(body.errors).flat()[0];
       throw new ApiRequestError(typeof first === "string" ? first : "Please check the information you entered.", 422);
     }
     if (response.status === 401) throw new ApiRequestError("Your session has expired. Please sign in again.", 401);
     if (response.status === 403) throw new ApiRequestError("Your account is no longer authorized to access this resource. Please sign in again.", 403);
-    throw new ApiRequestError(body.message || "The request could not be completed.", response.status);
+    throw new ApiRequestError(typeof body.message === "string" && body.message.trim()
+      ? body.message : "The request could not be completed.", response.status);
   }
-  return body as T;
+  return rawBody as T;
 }
