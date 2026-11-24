@@ -83,3 +83,14 @@
 .install-app-btn{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:999px;background:#315fe0;color:white;padding:6px 9px;font-size:9px;font-weight:700;white-space:nowrap}
 .installed-label{font-size:9px;color:#16845f;white-space:nowrap}
 @media(max-width:600px){.connectivity-strip{top:7px;font-size:9px;gap:7px;padding:6px 9px}.connectivity-message{max-width:210px}}
+
+@media (max-width: 760px) {
+  .sidebar {
+    visibility: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .sidebar-open { visibility: visible; }
+  .sidebar > * { flex-shrink: 0; }
+}
