@@ -1,0 +1,20 @@
+{
+  "Rules": [
+    {
+      "ID": "mwecau-guider-daily-backup-retention",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "mwecau-guider/daily/" },
+      "Expiration": { "Days": 35 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 90 },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 7 }
+    },
+    {
+      "ID": "mwecau-guider-monthly-backup-retention",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "mwecau-guider/monthly/" },
+      "Expiration": { "Days": 400 },
+      "NoncurrentVersionExpiration": { "NoncurrentDays": 400 },
+      "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 7 }
+    }
+  ]
+}

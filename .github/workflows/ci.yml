@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - name: Setup Node.js
@@ -41,6 +41,8 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+      - name: Verify Cloudflare Pages SEO and PWA artifacts
+        run: node scripts/verify-cloudflare-build.mjs
 
   verify-api:
     name: Validate Laravel API and run feature tests
@@ -51,9 +53,17 @@ jobs:
         working-directory: api
     steps:
       - name: Checkout source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Validate operational shell scripts
+        run: bash -n ../scripts/backup-mysql.sh ../scripts/restore-mysql.sh ../scripts/test-backup-restore.sh ../scripts/backup-mysql-s3.sh ../scripts/validate-production-env.sh ../scripts/test-production-env.sh ../scripts/staging-smoke.sh
+      - name: Test production environment guardrails
+        run: bash ../scripts/test-production-env.sh
+      - name: Install age for encrypted backup integration test
+        run: sudo apt-get update && sudo apt-get install --yes age
+      - name: Exercise encrypted backup and guarded restore
+        run: bash ../scripts/test-backup-restore.sh
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -66,6 +76,8 @@ jobs:
         run: composer install --no-interaction --prefer-dist
       - name: Audit PHP dependencies
         run: composer audit
+      - name: Prepare test environment
+        run: touch .env
       - name: Run API feature tests
         env:
           APP_ENV: testing
@@ -73,4 +85,119 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
           CACHE_STORE: array
-        run: php artisan test
+        run: php artisan test --display-warnings
+
+
+  verify-api-mysql:
+    name: Validate Laravel API on MySQL 8.4
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: mwecau_guider_test
+          MYSQL_USER: laravel
+          MYSQL_PASSWORD: test-password
+          MYSQL_ROOT_PASSWORD: root-test-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u laravel --password=test-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql
+          coverage: none
+      - name: Validate Composer manifest
+        run: composer validate --no-check-publish
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+      - name: Audit PHP dependencies
+        run: composer audit
+      - name: Prepare test environment
+        run: touch .env
+      - name: Run API feature tests against MySQL
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: mwecau_guider_test
+          DB_USERNAME: laravel
+          DB_PASSWORD: test-password
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+        run: php artisan test --display-warnings
+
+  notify-email:
+    name: Email CI result
+    runs-on: ubuntu-latest
+    needs: [verify-web, verify-api, verify-api-mysql]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Send CI result to repository owner
+        env:
+          SMTP_USERNAME: johncharlessarwi@gmail.com
+          SMTP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SMTP_SERVER: smtp.gmail.com
+          SMTP_PORT: '465'
+          WEB_RESULT: ${{ needs.verify-web.result }}
+          API_RESULT: ${{ needs.verify-api.result }}
+          MYSQL_RESULT: ${{ needs.verify-api-mysql.result }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RECIPIENT: johncharlessarwi@gmail.com
+        run: |
+          if [ -z "$SMTP_PASSWORD" ]; then
+            echo "Email notification skipped: configure SMTP GitHub Actions secrets."
+            exit 0
+          fi
+          python3 - <<'PY'
+          import os
+          import smtplib
+          from email.message import EmailMessage
+
+          web = os.environ["WEB_RESULT"]
+          api = os.environ["API_RESULT"]
+          mysql = os.environ["MYSQL_RESULT"]
+          passed = web == "success" and api == "success" and mysql == "success"
+          status = "SUCCESS" if passed else "FAILED"
+          msg = EmailMessage()
+          msg["Subject"] = f"[MWECau GUIDER CI] {status} - {os.environ['BRANCH']}"
+          msg["From"] = os.environ["SMTP_USERNAME"]
+          msg["To"] = os.environ["RECIPIENT"]
+          msg.set_content(
+              f"MWECau GUIDER continuous integration result: {status}\n\n"
+              f"Web checks: {web}\nAPI (SQLite) checks: {api}\nAPI (MySQL 8.4) checks: {mysql}\n"
+              f"Repository: {os.environ['REPOSITORY']}\n"
+              f"Branch: {os.environ['BRANCH']}\n"
+              f"Commit: {os.environ['COMMIT_SHA']}\n"
+              f"Workflow run: {os.environ['RUN_URL']}\n"
+          )
+          with smtplib.SMTP_SSL(
+              os.environ.get("SMTP_SERVER", "smtp.gmail.com"),
+              int(os.environ.get("SMTP_PORT", "465")),
+              timeout=20,
+          ) as smtp:
+              smtp.login(os.environ["SMTP_USERNAME"], os.environ["SMTP_PASSWORD"])
+              smtp.send_message(msg)
+          print(f"CI {status} email sent to {os.environ['RECIPIENT']}")
+          PY

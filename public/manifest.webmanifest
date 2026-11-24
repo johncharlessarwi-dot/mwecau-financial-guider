@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "MWECau GUIDER — Personal Finance",
+  "short_name": "MWECau GUIDER",
+  "description": "Private personal finance management for MWECau students.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f7fb",
+  "theme_color": "#101a2c",
+  "icons": [
+    { "src": "/icons/guider-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,3 +1,13 @@
+<p align="center">
+  <a href="https://github.com/johncharlessarwi-dot"><img src="https://avatars.githubusercontent.com/u/263143496?v=4" width="120" height="120" alt="John Charles Sarwi" /></a>
+  <br />
+  <a href="https://wa.me/255698170989">Chat na John kwenye WhatsApp · +255 698 170 989</a>
+</p>
+
+<div align="center">
+  <img src="assets/readme/project-motion.svg" width="100%" alt="MWECAU FINANCIAL GUIDER animated overview banner" />
+</div>
+
 # MWECau GUIDER
 
 **Your Money. Your Decisions. Your Future.**
@@ -24,6 +34,39 @@ See:
 - [Implementation roadmap](docs/ROADMAP.md)
 - [Security and privacy principles](SECURITY.md)
 
+
+## Cloudflare Workers frontend hosting
+
+The public React/PWA frontend is hosted by the project owner at
+**https://mwecau-financial-guider.johncharlessarwi.workers.dev/** (live endpoint availability must be checked separately).
+It is hosted using Cloudflare Workers static assets, not a Laravel web server. SEO canonical URL, sitemap and Google Search Console verification meta tag target this Workers hostname.
+
+**Important:** Until a real HTTPS Laravel API is connected at build time with `VITE_API_URL`, sign-in and registration are deliberately disabled. The frontend never sends user credentials to localhost in production. Adding a Cloudflare runtime variable without rebuilding the Vite assets does not supply `import.meta.env.VITE_API_URL` to the compiled JavaScript.
+
+See [Cloudflare Workers and backend connection guide](docs/CLOUDFLARE_WORKERS_API_SETUP.md). The old [Pages setup guide](docs/CLOUDFLARE_PAGES_DEPLOYMENT.md) is retained only for teams that later choose to migrate to `pages.dev`; it is not the current production host.
+
+**Deployment warning:** A live Worker frontend alone is not a functioning financial SaaS. Laravel API/MySQL hosting, session cookie topology, backups, staging QA and monitoring must still be verified before accepting actual user financial information.
+
+## Backend staging (Render + Aiven)
+
+A Render-compatible PHP 8.3 Docker image, startup script, container smoke test, and a provider setup guide are available under `api/` and [Render + Aiven staging instructions](docs/RENDER_AIVEN_STAGING.md).
+
+**Do not enable live financial registrations** until the Laravel API and MySQL are actually deployed, the Cloudflare/Render same-origin authentication topology is verified, and backup/restore tests have passed. Cloudflare Workers currently hosts the frontend only.
+
+## Local development: authenticated SPA
+
+The web client uses Laravel Sanctum's stateful, cookie-based SPA authentication. It does not persist bearer tokens in local storage.
+
+1. Start the Laravel API from `api/` and configure its database and application key.
+2. Set `SANCTUM_STATEFUL_DOMAINS` to the frontend hostname and port (without a scheme), for example `localhost:5173,127.0.0.1:5173`.
+3. Set `CORS_ALLOWED_ORIGINS` to the exact frontend origin, for example `http://localhost:5173`. Credential support is enabled only for these configured origins.
+4. Copy the root `.env.example` to `.env` and set `VITE_API_URL` to the API origin, for example `http://localhost:8000`.
+5. Start the Vite client with `npm install && npm run dev`.
+
+The browser first obtains the Sanctum CSRF cookie, then sends credentialed requests. The API regenerates the session identifier after registration and login, exposes only a safe user profile, and invalidates the session on logout. Login and registration remain rate-limited.
+
+For production, serve the frontend and API over HTTPS, set `SESSION_SECURE_COOKIE=true`, use a same-site deployment topology where possible, and configure the cookie domain and Sanctum stateful domains for the actual hostnames. Do not use wildcard CORS origins with credentials. The authenticated web workspace reads and writes accounts, transactions, categories, and budgets through the versioned Laravel API. Account balances are calculated from confirmed ledger entries in the account currency. The Reports workspace now provides authenticated, date-filtered income, expense, net cash-flow, and category summaries, with TZS and USD kept separate; transfers and draft entries are excluded. The transaction list currently loads the latest 100 records; full pagination, trend charts, exports, and financial health scoring remain planned. The dashboard does not seed or display fabricated demo financial records. The AI Accountant remains not yet connected.
+
 ## Important financial-data principles
 
 1. Financial amounts use decimal-safe storage and calculations; never binary floating-point for persisted money.
@@ -45,3 +88,18 @@ GitHub: https://github.com/johncharlessarwi-dot
 ---
 
 This project is under active development. Production financial use must wait until the relevant security, accounting, backup, and recovery controls have passed verification.
+
+---
+
+<!-- Developer contact links -->
+<div align="center">
+  <h3>Connect with the developer</h3>
+  <a href="https://wa.me/255698170989?text=Habari%20John%2C%20nimeona%20project%20yako%20GitHub.">
+    <img src="https://img.shields.io/badge/WhatsApp-Chat%20with%20John-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="WhatsApp John Charles Sarwi" />
+  </a>
+  <a href="https://john-charles-sarwi-portfolio.vercel.app/">
+    <img src="https://img.shields.io/badge/Portfolio-View%20Developer%20Profile-146C94?style=for-the-badge&logo=vercel&logoColor=white" alt="John Charles Sarwi developer portfolio" />
+  </a>
+  <p><strong>Developer:</strong> <a href="https://john-charles-sarwi-portfolio.vercel.app/">John Charles Sarwi</a> · Tanzania</p>
+</div>
+<!-- End developer contact links -->
