@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 type Transaction = { id: number; title: string; category: string; date: string; amount: number; currency:string; kind: "income" | "expense" };
-type Tab = "Overview" | "Accounts" | "Transactions" | "Budgets" | "Categories" | "Reports" | "AI Accountant";
+type Tab = "Overview" | "Accounts" | "Transactions" | "Budgets" | "Categories" | "Reports" | "AI Accountant" | "Account settings" | "Help centre";
 type Category = { id:number; name:string; type:"income"|"expense"; system:boolean; active:boolean };
 type Budget = { id:number; name:string; category:string; categoryId:number | null; limit:number; spent:number; currency:string; period:string; startDate:string; endDate:string; active:boolean };
 type Account = { id:number; name:string; type:string; currency:string; openingBalance:number; currentBalance:number };
@@ -319,8 +319,8 @@ function DashboardApp() {
         </nav>
         <div className="sidebar-bottom">
           <div className="security-note"><ShieldCheck size={17} /><div><b>Your money, your control</b><small>Privacy-first by design</small></div></div>
-          <button className="nav-item"><Settings size={18} /><span>Settings</span></button>
-          <button className="nav-item"><CircleHelp size={18} /><span>Help centre</span></button>
+          <button className="nav-item" aria-current={tab === "Account settings" ? "page" : undefined} onClick={() => { setTab("Account settings"); setMobileNav(false); }}><Settings size={18} /><span>Settings</span></button>
+          <button className="nav-item" aria-current={tab === "Help centre" ? "page" : undefined} onClick={() => { setTab("Help centre"); setMobileNav(false); }}><CircleHelp size={18} /><span>Help centre</span></button>
           <div className="profile"><div className="avatar">JS</div><div><b>{user.name}</b><small>{user.email}</small></div><ChevronDown size={15} /></div>
         </div>
       </aside>
@@ -424,6 +424,17 @@ function DashboardApp() {
 
           {tab === "Reports" && <section className="panel full-panel"><div className="panel-heading"><div><h2>Financial reports</h2><p>Confirmed income and expenses from your complete ledger</p></div><span className="demo-pill">LIVE REPORT</span></div><form className="report-filters" onSubmit={e=>{e.preventDefault();void loadReport();}}><label>From<input type="date" required value={reportFrom} max={reportTo} onChange={e=>setReportFrom(e.target.value)}/></label><label>To<input type="date" required value={reportTo} min={reportFrom} onChange={e=>setReportTo(e.target.value)}/></label><button className="primary-btn" type="submit" disabled={reportLoading}>{reportLoading?"Loading…":"Generate report"}</button></form>{reportError&&<p className="inline-error" role="alert">{reportError}</p>}{!report&&<p className="report-empty">Choose a date range and generate a report to view your recorded cash flow.</p>}{report&&<div className="report-currency-list">{report.currencies.map(currency=><section className="report-currency" key={currency.currency}><div className="report-currency-heading"><h3>{currency.currency} summary</h3><span>{report.from} – {report.to}</span></div><div className="report-stats"><div><small>Total income</small><b className="positive">{money(Number(currency.income),currency.currency)}</b></div><div><small>Total expenses</small><b>{money(Number(currency.expenses),currency.currency)}</b></div><div><small>Net cash flow</small><b className={Number(currency.net_cash_flow)>=0?"positive":"amount-out"}>{money(Number(currency.net_cash_flow),currency.currency)}</b></div></div><h4>Category breakdown</h4>{currency.categories.length===0?<p className="report-empty">No confirmed income or expenses in this period.</p>:<div className="report-category-list">{currency.categories.map(item=><div className="report-category-row" key={`${item.type}-${item.category}`}><span className="report-category-dot"/><div><b>{item.category}</b><small>{item.type==="income"?"Income":"Expense"}</small></div><strong>{money(Number(item.amount),currency.currency)}</strong></div>)}</div>}</section>)}</div>}</section>}
 
+          {tab === "Account settings" && <section className="panel full-panel">
+            <h2>Signed-in account</h2>
+            <p>{user.name} · {user.email}</p>
+            <button className="secondary-btn" onClick={() => void logout()}>Sign out of this device</button>
+          </section>}
+          {tab === "Help centre" && <section className="panel full-panel">
+            <h2>Using your ledger</h2>
+            <p>Open Accounts to add an account, then use Transactions to review the income and expenses you have recorded.</p>
+            <button className="secondary-btn" onClick={() => setTab("Accounts")}>Open accounts</button>
+            <button className="secondary-btn" onClick={() => setTab("Transactions")}>View transactions</button>
+          </section>}
           {tab === "AI Accountant" && <section className="panel ai-panel"><div className="ai-orb"><Sparkles size={28}/></div><span className="insight-label">MWECau GUIDER INTELLIGENCE</span><h2>Your personal AI accountant.</h2><p>Ask questions about budgeting, spending habits and financial planning. AI advice will be connected to your verified financial records in a later phase.</p><div className="ai-example"><span>Try asking</span><button onClick={() => setQuery("food")}>How much did I spend on food?</button><button onClick={() => setQuery("income")}>How can I plan my monthly income?</button></div><div className="coming-soon"><Sparkles size={15}/> AI assistant is not connected in this demo build.</div></section>}
           <footer className="footer"><span>MWECau GUIDER <i>·</i> Built for smarter financial habits in Tanzania</span><span>Designed & developed by <b>JOHN ONLINE SERVICES AND APPLICATIONS</b> · Developer: <b>John Charles Sarwi</b> · <a href="https://john-charles-sarwi-portfolio.vercel.app/" target="_blank" rel="noreferrer">Portfolio</a></span></footer>
         </div>
